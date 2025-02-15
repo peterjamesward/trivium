@@ -53,4 +53,11 @@ updateFromFrontend sessionId clientId msg model =
             )
 
         AskForDiagram diagramId ->
-            ( model, Cmd.none )
+            ( model
+            , case Dict.get diagramId model.d2Diagrams of
+                Just diagram ->
+                    Lamdera.sendToFrontend clientId (Diagram diagram)
+
+                Nothing ->
+                    Cmd.none
+            )

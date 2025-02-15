@@ -3,6 +3,7 @@ module Frontend exposing (..)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import CommonUiElements exposing (..)
+import DiagramToD2
 import DomainModel exposing (..)
 import Element exposing (..)
 import Element.Input as Input
@@ -35,6 +36,7 @@ init url key =
       , message = ""
       , diagramList = []
       , d2Diagram = Nothing
+      , d2Text = ""
       }
     , Lamdera.sendToBackend AskForDiagramList
     )
@@ -71,8 +73,11 @@ updateFromBackend msg model =
         NoOpToFrontend ->
             ( model, Cmd.none )
 
-        UpdatedDiagram diagram ->
-            ( { model | d2Diagram = Just diagram }
+        Diagram diagram ->
+            ( { model
+                | d2Diagram = Just diagram
+                , d2Text = DiagramToD2.diagramToD2 diagram
+              }
             , Cmd.none
             )
 
@@ -91,7 +96,11 @@ view model =
     { title = "d2Magic starts here"
     , body =
         [ Element.layout [ width fill, height fill, padding 5 ] <|
-            Element.column [ height fill, spacing 5, padding 5 ]
-                (List.map selectDiagram model.diagramList)
+            Element.row [ height fill, spacing 5, padding 5 ]
+                [ Element.column
+                    [ height fill, spacing 5, padding 5 ]
+                    (List.map selectDiagram model.diagramList)
+                , text model.d2Text
+                ]
         ]
     }

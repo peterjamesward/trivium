@@ -14,6 +14,7 @@ type alias FrontendModel =
     , d2Diagram : Maybe D2Diagram
 
     -- To add: Scene3DModel, File loading stuff.
+    , d2Text : String
     }
 
 
@@ -44,4 +45,4 @@ type BackendMsg
 type ToFrontend
     = NoOpToFrontend
     | DiagramList (List DiagramId)
-    | UpdatedDiagram D2Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.
+    | Diagram D2Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.
