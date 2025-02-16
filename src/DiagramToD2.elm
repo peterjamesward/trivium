@@ -13,11 +13,12 @@ diagramToD2 diagram =
     -- , links = Dict ( NodeId, NodeId ) D2Link
     -- }
     let
-        withWrapper label contents =
-            "\n" ++ label ++ " : {\n" ++ contents ++ "\n}\n"
+        withWrapper id label contents =
+            id ++ " : " ++ label ++ " {\n" ++ contents ++ "\n}\n"
 
         classes =
             withWrapper "classes"
+                ""
                 (String.concat <| List.map writeClass <| Dict.values diagram.classes)
 
         nodes : String
@@ -36,17 +37,33 @@ diagramToD2 diagram =
 
         writeClass : D2Class -> String
         writeClass class =
-            withWrapper class.id "--class here"
+            withWrapper class.id "" <|
+                withWrapper "style" "" <|
+                    writeAttributes class.attributes
 
         writeNode : D2Node -> String
         writeNode node =
-            withWrapper node.id "--node here"
+            withWrapper node.id node.label <|
+                case node.class of
+                    Just class ->
+                        "class:" ++ class
+
+                    Nothing ->
+                        ""
 
         writeLink : D2Link -> String
         writeLink link =
-            link.fromNode ++ " -> " ++ link.toNode ++ " : " ++ link.label ++ "\n"
+            withWrapper (link.fromNode ++ " -> " ++ link.toNode) link.label <|
+                writeAttributes link.attributes
+
+        writeAttributes : Dict String String -> String
+        writeAttributes dict =
+            dict
+                |> Dict.toList
+                |> List.map (\( key, value ) -> key ++ ": " ++ value)
+                |> String.join "\n"
     in
-    String.join "\n" <| [ classes, nodes, links ]
+    String.join "" <| [ classes, nodes, links ]
 
 
 

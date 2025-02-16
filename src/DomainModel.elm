@@ -31,6 +31,13 @@ type alias D2Class =
     }
 
 
+
+-- Note that D2 puts `style` as its own dict inside node and link.
+-- Don't want to be dominated by this but it would be nice to be able to "round-trip" D2,
+-- hence would need to be able to preserve all elements of any file.
+-- This should perhaps be a "nice to have".
+
+
 type alias D2Node =
     -- Boxes, what can contain other boxes and other non-box stuff.
     { id : NodeId

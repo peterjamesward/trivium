@@ -27,8 +27,8 @@ nodeClass =
     { id = "orangeSphere"
     , attributes =
         Dict.fromList
-            [ ( "colour", "orange" )
-            , ( "shape", "sphere" )
+            [ ( "fill", "orange" )
+            , ( "shape", "circle" )
             ]
     }
 
@@ -38,7 +38,7 @@ linkClass =
     { id = "blueLink"
     , attributes =
         Dict.fromList
-            [ ( "colour", "blue" )
+            [ ( "stroke", "blue" )
             ]
     }
 
