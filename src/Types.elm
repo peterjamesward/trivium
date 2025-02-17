@@ -11,16 +11,16 @@ type alias FrontendModel =
     { key : Key
     , message : String
     , diagramList : List DiagramId
-    , d2Diagram : Maybe D2Diagram
+    , diagram : Maybe Diagram
+    , asText : Maybe String
 
     -- To add: Scene3DModel, File loading stuff.
-    , d2Text : String
     }
 
 
 type alias BackendModel =
     { message : String
-    , d2Diagrams : Dict DiagramId D2Diagram
+    , diagrams : Dict DiagramId Diagram
     }
 
 
@@ -33,7 +33,7 @@ type FrontendMsg
 
 type ToBackend
     = NoOpToBackend
-    | DiagramChangedAtFront D2Diagram -- leaves some room for optimisation!
+    | DiagramChangedAtFront Diagram -- leaves some room for optimisation!
     | AskForDiagramList
     | AskForDiagram DiagramId
 
@@ -45,4 +45,4 @@ type BackendMsg
 type ToFrontend
     = NoOpToFrontend
     | DiagramList (List DiagramId)
-    | Diagram D2Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.
+    | DiagramContent Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.

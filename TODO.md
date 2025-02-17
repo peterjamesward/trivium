@@ -72,3 +72,48 @@ Can add semantics to link:
 
 Using "imposed keyword semantics", like D2, makes our life easier!
 Lexer stays the same. Triples are things. Semantics much easier.
+
+Reserved words (so far):
+- a
+- Style
+- colour (red, orange, ..)
+- shape  (cube, sphere, cylinder, cone, ..)
+- Type 
+- Link 
+- direction (..)
+- label 
+
+May need some more when we think about defining a projection/selection/diagram. Certainly want the 'binding' between type/class and style not to be defined in the model, but in the view.
+E.g.:
+
+```
+funky a Diagram;
+    contains Server, Database; -- i.e. "all nodes of these types"
+    using writes, reads; -- "all links of these types"
+    showing protocol;   -- "use this for link label?"
+    adopting thisStyle, thatStyle; -- "doesn't work; need to associate with Types"
+    layout force3d. -- "yes".
+```
+
+This line of thought makes me think that it should be easier to assemble a diagram from
+the smaller components ("quanta"); that these diagrams, just collections of instances,
+not necessarily defined only by type. But more they also each have a database entry, perhaps
+each has its owne versioning even, and a diagram is like a package dependency with version
+constraints (e.g. latest, <=5.1, ==4.3.2).
+
+I see no need at this moment for quoted strings, so I will drop those, or keep them for labels but not really treat them as special. So we can use "Pete 🤷‍♂️" as a node, link or anything. The quotes are needed for the space here!
+
+Anyway, let's have a "database", with parts for:
+- Nodes
+- Links
+- Types (node and link)
+- Styles
+- Diagrams.
+
+We can have one big window that has two modes:
+1. Navigate database, see the current text, edit it, add new elements, track versions.
+2. The force3d view, with option to switch between Diagrams and Styles.
+
+With Lamdera, can trivially open as many windows as we want.
+Question: do we also want "Project" as a concept and if so, are they segregated or is content exchangable?
+Answer: "Project" would be a collaboration space. If you want separation, make a new instance of the app.

@@ -3,7 +3,7 @@ module Frontend exposing (..)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import CommonUiElements exposing (..)
-import DiagramToD2
+import DiagramAsText exposing (diagramAsText)
 import DomainModel exposing (..)
 import Element exposing (..)
 import Element.Input as Input
@@ -35,8 +35,8 @@ init url key =
     ( { key = key
       , message = ""
       , diagramList = []
-      , d2Diagram = Nothing
-      , d2Text = ""
+      , diagram = Nothing
+      , asText = Nothing
       }
     , Lamdera.sendToBackend AskForDiagramList
     )
@@ -73,10 +73,10 @@ updateFromBackend msg model =
         NoOpToFrontend ->
             ( model, Cmd.none )
 
-        Diagram diagram ->
+        DiagramContent diagram ->
             ( { model
-                | d2Diagram = Just diagram
-                , d2Text = DiagramToD2.diagramToD2 diagram
+                | diagram = Just diagram
+                , asText = Just <| diagramAsText diagram
               }
             , Cmd.none
             )
@@ -100,7 +100,12 @@ view model =
                 [ Element.column
                     [ height fill, spacing 5, padding 5 ]
                     (List.map selectDiagram model.diagramList)
-                , text model.d2Text
+                , case model.asText of
+                    Just asText ->
+                        text asText
+
+                    Nothing ->
+                        text "Nothing to see"
                 ]
         ]
     }

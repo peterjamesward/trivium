@@ -3,7 +3,7 @@ module Backend exposing (..)
 import Dict exposing (..)
 import DomainModel exposing (..)
 import Lamdera exposing (ClientId, SessionId, sendToFrontend)
-import TrivialDiagram exposing (diagram)
+import TestDiagram exposing (..)
 import Types exposing (..)
 
 
@@ -23,7 +23,7 @@ app =
 init : ( Model, Cmd BackendMsg )
 init =
     ( { message = "Hello!"
-      , d2Diagrams = Dict.singleton TrivialDiagram.diagram.id TrivialDiagram.diagram
+      , diagrams = Dict.singleton TestDiagram.testDiagram.id TestDiagram.testDiagram
       }
     , Cmd.none
     )
@@ -49,14 +49,14 @@ updateFromFrontend sessionId clientId msg model =
 
         AskForDiagramList ->
             ( model
-            , Lamdera.sendToFrontend clientId (DiagramList <| Dict.keys model.d2Diagrams)
+            , Lamdera.sendToFrontend clientId (DiagramList <| Dict.keys model.diagrams)
             )
 
         AskForDiagram diagramId ->
             ( model
-            , case Dict.get diagramId model.d2Diagrams of
+            , case Dict.get diagramId model.diagrams of
                 Just diagram ->
-                    Lamdera.sendToFrontend clientId (Diagram diagram)
+                    Lamdera.sendToFrontend clientId (DiagramContent diagram)
 
                 Nothing ->
                     Cmd.none
