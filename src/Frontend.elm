@@ -3,13 +3,16 @@ module Frontend exposing (..)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import CommonUiElements exposing (..)
-import DiagramAsText exposing (diagramAsText)
+import Dict exposing (..)
 import DomainModel exposing (..)
 import Element exposing (..)
+import Element.Font as Font
 import Element.Input as Input
 import Html
 import Html.Attributes as Attr
 import Lamdera
+import Lexer exposing (..)
+import Parser exposing (..)
 import Types exposing (..)
 import Url
 
@@ -35,8 +38,13 @@ init url key =
     ( { key = key
       , message = ""
       , diagramList = []
-      , diagram = Nothing
-      , asText = Nothing
+      , modulesList = []
+      , modules = Dict.empty
+      , diagrams = Dict.empty
+      , contentEditArea = ""
+      , tokenizedInput = []
+      , visual = Nothing
+      , parseStatus = ParseError
       }
     , Lamdera.sendToBackend AskForDiagramList
     )
@@ -66,6 +74,21 @@ update msg model =
         NoOpFrontendMsg ->
             ( model, Cmd.none )
 
+        UserUpdatedContent content ->
+            let
+                tokens =
+                    Lexer.tokenize content
+
+                _ =
+                    Debug.log "Tokens" tokens
+            in
+            ( { model
+                | contentEditArea = content
+                , tokenizedInput = tokens
+              }
+            , Cmd.none
+            )
+
 
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
@@ -74,10 +97,7 @@ updateFromBackend msg model =
             ( model, Cmd.none )
 
         DiagramContent diagram ->
-            ( { model
-                | diagram = Just diagram
-                , asText = Just <| diagramAsText diagram
-              }
+            ( model
             , Cmd.none
             )
 
@@ -89,23 +109,32 @@ updateFromBackend msg model =
 
 view : Model -> Browser.Document FrontendMsg
 view model =
-    let
-        selectDiagram id =
-            simpleButton (UserSelectedDiagram id) id
-    in
-    { title = "d2Magic starts here"
+    { title = "PEATmagic"
     , body =
-        [ Element.layout [ width fill, height fill, padding 5 ] <|
-            Element.row [ height fill, spacing 5, padding 5 ]
-                [ Element.column
-                    [ height fill, spacing 5, padding 5 ]
-                    (List.map selectDiagram model.diagramList)
-                , case model.asText of
-                    Just asText ->
-                        text asText
-
-                    Nothing ->
-                        text "Nothing to see"
+        [ layout
+            [ width fill
+            , height fill
+            , Font.size 12
+            , Font.family
+                [ Font.typeface "Open Sans"
+                , Font.sansSerif
+                ]
+            ]
+          <|
+            row columnStyles
+                [ column columnStyles
+                    [ text "Please input something."
+                    , Input.multiline [ height fill ]
+                        { onChange = UserUpdatedContent
+                        , text = model.contentEditArea
+                        , placeholder = Nothing
+                        , label = Input.labelHidden "content"
+                        , spellcheck = False
+                        }
+                    ]
+                , column columnStyles
+                    [ text "Reserved for future functionality."
+                    ]
                 ]
         ]
     }

@@ -88,6 +88,7 @@ colorScheme =
 
 columnStyles =
     [ width fill
+    , height fill
     , spacing 5
     , Border.width 2
     , Border.rounded 6

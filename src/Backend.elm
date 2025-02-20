@@ -3,7 +3,6 @@ module Backend exposing (..)
 import Dict exposing (..)
 import DomainModel exposing (..)
 import Lamdera exposing (ClientId, SessionId, sendToFrontend)
-import TestDiagram exposing (..)
 import Types exposing (..)
 
 
@@ -23,7 +22,8 @@ app =
 init : ( Model, Cmd BackendMsg )
 init =
     ( { message = "Hello!"
-      , diagrams = Dict.singleton TestDiagram.testDiagram.id TestDiagram.testDiagram
+      , modules = Dict.empty
+      , diagrams = Dict.empty
       }
     , Cmd.none
     )
@@ -33,6 +33,9 @@ update : BackendMsg -> Model -> ( Model, Cmd BackendMsg )
 update msg model =
     case msg of
         NoOpBackendMsg ->
+            ( model, Cmd.none )
+
+        ClientConnected ->
             ( model, Cmd.none )
 
 
@@ -61,3 +64,8 @@ updateFromFrontend sessionId clientId msg model =
                 Nothing ->
                     Cmd.none
             )
+
+
+subscriptions : Model -> Sub BackendMsg
+subscriptions model =
+    Lamdera.onConnect (\client session -> ClientConnected)

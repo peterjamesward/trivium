@@ -9,6 +9,10 @@ type alias NodeId =
     String
 
 
+type alias LinkId =
+    String
+
+
 type alias AttributeId =
     String
 
@@ -29,6 +33,10 @@ type alias DiagramId =
     String
 
 
+type alias ModuleId =
+    String
+
+
 type Shape
     = Cube
     | Cylinder
@@ -38,14 +46,11 @@ type Shape
 
 type alias Style =
     -- Essentially, we use class attribute for layout and rendering.
+    -- Put these here not in Class, so we can rebind them for each dagram.
     { id : StyleId
     , colour : Color
     , shape : Shape
     }
-
-
-type alias StyleBinding =
-    Dict ClassId StyleId
 
 
 type alias Class =
@@ -65,7 +70,8 @@ type alias Node =
 
 type alias Link =
     -- Links, join boxes and carry their own information.
-    { fromNode : NodeId
+    { linkId : LinkId -- can't use node pair as may have parallel links.
+    , fromNode : NodeId
     , toNode : NodeId
     , label : String
     , class : Maybe ClassId
@@ -73,15 +79,20 @@ type alias Link =
     }
 
 
-type alias Diagram =
-    -- A diagram is just a collection of the above.
-    { id : DiagramId
+type alias Module =
+    -- A module contains classes, nodes and links.
+    { id : ModuleId
+    , label : String
+    , sourceFile : Maybe String -- if was loaded from disc.
     , classes : Dict ClassId Class
     , nodes : Dict NodeId Node
-    , links : Dict ( NodeId, NodeId ) Link
+    , links : Dict LinkId Link
     }
 
 
-emptyDiagram : Diagram
-emptyDiagram =
-    Diagram "TEST" Dict.empty Dict.empty Dict.empty
+type alias Diagram =
+    -- A diagram contains styles and style bindings.
+    { id : DiagramId
+    , bindings : Dict ClassId StyleId
+    , styles : Dict StyleId Style
+    }
