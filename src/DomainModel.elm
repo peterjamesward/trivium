@@ -5,6 +5,11 @@ import Dict exposing (..)
 import Set exposing (..)
 
 
+
+type alias Triple =
+    ( String, String, String )
+
+
 type alias NodeId =
     String
 

@@ -10,12 +10,15 @@ import Time exposing (Posix)
 import Url exposing (Url)
 import Set exposing (..)
 
+
+
 type alias FrontendModel =
     { key : Key
     , message : String
     , diagramList : List DiagramId -- full list of what is in the backend
     , modulesList : List ModuleId -- ditto
     , modules : Dict ModuleId Module -- loaded and active.
+    , aModule : Maybe Module -- being edited.
     , diagrams : Dict DiagramId Diagram
     , contentEditArea : String -- place to enter and edit modules and diagrams
     , tokenizedInput : List Token -- live parsing and errors.

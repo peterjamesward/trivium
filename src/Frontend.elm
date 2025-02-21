@@ -16,6 +16,7 @@ import Parser exposing (..)
 import Types exposing (..)
 import Url
 import Time exposing (..)
+import ContentFromTriples exposing (..)
 
 
 type alias Model =
@@ -41,6 +42,7 @@ init url key =
       , diagramList = []
       , modulesList = []
       , modules = Dict.empty
+      , aModule = Nothing
       , diagrams = Dict.empty
       , contentEditArea = ""
       , tokenizedInput = []
@@ -82,13 +84,21 @@ update msg model =
 
                 parse = Parser.parseTokensToTriples (Time.millisToPosix 122) tokens
 
+                aModule =
+                    case parse of
+                        Ok triple ->
+                            Just <| ContentFromTriples.moduleFromTriples triple
+                        _ ->
+                            Nothing
+
                 _ =
-                    Debug.log "Parse" parse
+                    Debug.log "Module" aModule
             in
             ( { model
                 | contentEditArea = content
                 , tokenizedInput = tokens
                 , parseStatus = parse
+                , aModule = aModule
               }
             , Cmd.none
             )

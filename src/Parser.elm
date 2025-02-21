@@ -55,10 +55,6 @@ import Time
 -}
 
 
-type alias Triple =
-    ( String, String, String )
-
-
 type ParseState
     = AwaitingSubject (Set Triple)
     | WithSubject String (Set Triple)
