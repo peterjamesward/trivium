@@ -90,8 +90,20 @@ type alias Module =
     }
 
 
+emptyModule : Module
+emptyModule =
+    { id = ""
+    , label = ""
+    , sourceFile = Nothing
+    , classes = Dict.empty
+    , nodes = Dict.empty
+    , links = Dict.empty
+    }
+
+
 type alias Diagram =
     -- A diagram contains styles and style bindings.
+    -- Not sure if we _derive_ this from a Module, or what...
     { id : DiagramId
     , bindings : Dict ClassId StyleId
     , styles : Dict StyleId Style

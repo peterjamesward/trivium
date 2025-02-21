@@ -15,6 +15,7 @@ import Lexer exposing (..)
 import Parser exposing (..)
 import Types exposing (..)
 import Url
+import Time exposing (..)
 
 
 type alias Model =
@@ -44,7 +45,7 @@ init url key =
       , contentEditArea = ""
       , tokenizedInput = []
       , visual = Nothing
-      , parseStatus = ParseError
+      , parseStatus = Err "nothing to parse"
       }
     , Lamdera.sendToBackend AskForDiagramList
     )
@@ -79,12 +80,15 @@ update msg model =
                 tokens =
                     Lexer.tokenize content
 
+                parse = Parser.parseTokensToTriples (Time.millisToPosix 122) tokens
+
                 _ =
-                    Debug.log "Tokens" tokens
+                    Debug.log "Parse" parse
             in
             ( { model
                 | contentEditArea = content
                 , tokenizedInput = tokens
+                , parseStatus = parse
               }
             , Cmd.none
             )

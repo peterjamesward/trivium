@@ -8,7 +8,7 @@ import LexerTypes exposing (..)
 import Parser exposing (..)
 import Time exposing (Posix)
 import Url exposing (Url)
-
+import Set exposing (..)
 
 type alias FrontendModel =
     { key : Key
@@ -20,7 +20,7 @@ type alias FrontendModel =
     , contentEditArea : String -- place to enter and edit modules and diagrams
     , tokenizedInput : List Token -- live parsing and errors.
     , visual : Maybe String -- will become a 3d visualisation.
-    , parseStatus : Parser.ParseResult
+    , parseStatus : Result String (Set Triple)
     }
 
 
