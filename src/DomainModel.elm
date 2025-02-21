@@ -60,7 +60,7 @@ type alias Style =
 
 type alias Class =
     { id : ClassId
-    , label : String
+    , label : Maybe String
     }
 
 

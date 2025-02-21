@@ -1,8 +1,8 @@
 module ContentFromTriples exposing (..)
 
-import DomainModel exposing (..)
-import Dict exposing (..)
 import Set exposing (..)
+import Dict exposing (..)
+import DomainModel exposing (..)
 
 {-
     With no concern for efficiency, populate the domain model structures from a set of triples.
@@ -34,13 +34,25 @@ moduleFromTriples triples =
             triples
             |> Set.filter  (\(s,r,o) -> r == "a" && o == "Type" )
             |> Set.map (\(s,r,o) -> s)
+            |> Set.toList
+            |> List.map (\s -> (s, {id = s, label = Nothing}))
+            |> Dict.fromList
 
         classesWithLabels =
-            triples
-            |> Set.filter (\(s,r,o) -> Set.member s classes && r == "label")
-            |> Set.toList
-            |> List.map (\(s,r,o) -> (s, {id = s, label = o}) )
-            |> Dict.fromList
+             triples
+             |> Set.foldl
+             (\(s,r,o) dict ->
+                case (Dict.get s classes, r ) of
+                    (Just aClass, "label") ->
+                        Dict.insert aClass.id { aClass | label = Just o} dict
+
+                    _ ->
+                        dict
+             )
+             classes
+
+
+
     in
 
     { id = moduleId
