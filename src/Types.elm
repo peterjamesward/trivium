@@ -40,6 +40,7 @@ type FrontendMsg
     | UserUpdatedContent String
     | NoOpFrontendMsg
     | UserClickedSave
+    | UserClickedModuleId ModuleId
 
 
 type ToBackend
@@ -48,6 +49,7 @@ type ToBackend
     | AskForDiagramList
     | AskForDiagram DiagramId
     | SaveModule Module
+    | RequestModule ModuleId
 
 
 type BackendMsg
@@ -60,3 +62,4 @@ type ToFrontend
     | DiagramList (List DiagramId)
     | DiagramContent Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.
     | ModuleList (List ModuleId)
+    | ModuleContent Module

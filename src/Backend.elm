@@ -42,6 +42,16 @@ update msg model =
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
 updateFromFrontend sessionId clientId msg model =
     case msg of
+        RequestModule id ->
+            case Dict.get id model.modules of
+                Just m ->
+                    ( model
+                    , Lamdera.sendToFrontend clientId (ModuleContent m)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         SaveModule mod ->
             ( { model | modules = Dict.insert mod.id mod model.modules }
             , Lamdera.broadcast (ModuleList (Dict.keys model.modules))

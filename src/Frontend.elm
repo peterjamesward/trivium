@@ -57,6 +57,11 @@ init url key =
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
     case msg of
+        UserClickedModuleId mId ->
+            ( model
+            , Lamdera.sendToBackend (RequestModule mId)
+            )
+
         UserClickedSave ->
             case model.aModule of
                 Just m ->
@@ -133,6 +138,11 @@ updateFromBackend msg model =
             , Cmd.none
             )
 
+        ModuleContent m ->
+            ( { model | aModule = Just m }
+            , Cmd.none
+            )
+
 
 view : Model -> Browser.Document FrontendMsg
 view model =
@@ -165,6 +175,17 @@ view model =
                     ]
                 , column columnStyles
                     [ ViewCatalogue.showCatalogue model.aModule
+                    ]
+                , column columnStyles
+                    [ model.moduleList
+                        |> List.map
+                            (\moduleId ->
+                                Input.button CommonUiElements.buttonStyles
+                                    { label = text moduleId
+                                    , onPress = Just (UserClickedModuleId moduleId)
+                                    }
+                            )
+                        |> wrappedRow [ spacing 5, padding 5, width fill ]
                     ]
                 ]
         ]
