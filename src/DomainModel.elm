@@ -48,6 +48,14 @@ type Shape
     | Sphere
 
 
+type alias InnerDict =
+    Dict String (Set String)
+
+
+type alias OuterDict =
+    Dict String InnerDict
+
+
 type alias Style =
     -- Essentially, we use class attribute for layout and rendering.
     -- Put these here not in Class, so we can rebind them for each dagram.
@@ -71,7 +79,7 @@ type alias Node =
     { id : NodeId
     , label : String
     , class : Maybe ClassId
-    , attributes : Dict String String
+    , attributes : InnerDict
     }
 
 
@@ -82,7 +90,7 @@ type alias Link =
     , toNode : NodeId
     , label : String
     , class : Maybe ClassId
-    , attributes : Dict String String
+    , attributes : InnerDict
     }
 
 

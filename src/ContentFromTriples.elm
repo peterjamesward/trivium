@@ -14,14 +14,6 @@ import Types exposing (..)
 -}
 
 
-type alias InnerDict =
-    Dict String (Set String)
-
-
-type alias OuterDict =
-    Dict String InnerDict
-
-
 type alias Indexes =
     { subjectRelationIndex : OuterDict -- facts about each subject
     , objectRelationIndex : OuterDict -- facts about each object
@@ -170,21 +162,30 @@ moduleFromTriples triples =
             { id = id
             , label = fromIndex1 id "label" indexes.subjectRelationIndex |> Maybe.withDefault ""
             , class = fromIndex1 id "is" indexes.subjectRelationIndex
-            , attributes = flattenInnerDict id indexes.subjectRelationIndex
+            , attributes = Dict.get id indexes.subjectRelationIndex |> Maybe.withDefault Dict.empty
             }
 
-        flattenInnerDict : String -> OuterDict -> Dict String String
-        flattenInnerDict outerKey dict =
-            -- Discard any multiple values.
-            Dict.get outerKey dict
-                |> Maybe.withDefault Dict.empty
-                |> Dict.map
-                    (\innerKey set -> set |> Set.toList |> List.head |> Maybe.withDefault "<?>")
+        links =
+            -- Links, in this new world, are explicit and we can find them by their "__FROM"
+            -- or we can just look for nodes that start with "__", which is clearer if less efficient.
+            indexes.subjectRelationIndex
+                |> Dict.filter (\id content -> String.startsWith "__" id)
+                |> Dict.map buildLink
+
+        buildLink : NodeId -> InnerDict -> Link
+        buildLink anon inner =
+            { linkId = anon
+            , fromNode = fromIndex1 anon "__FROM" indexes.subjectRelationIndex |> Maybe.withDefault ""
+            , toNode = fromIndex1 anon "__TO" indexes.subjectRelationIndex |> Maybe.withDefault ""
+            , label = fromIndex1 anon "label" indexes.subjectRelationIndex |> Maybe.withDefault ""
+            , class = fromIndex1 anon "is" indexes.subjectRelationIndex
+            , attributes = inner
+            }
     in
     { id = moduleId
     , label = moduleLabel
     , sourceFile = Nothing
     , classes = Dict.union allUsedClasses declaredButUnusedClasses
     , nodes = nodes
-    , links = Dict.empty
+    , links = links
     }

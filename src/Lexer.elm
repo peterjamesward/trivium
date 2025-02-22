@@ -64,7 +64,7 @@ whitespace =
 
 
 punctuation =
-    Set.fromList [ ',', ';', '.' ]
+    Set.fromList [ ',', ';', '.', ':' ]
 
 
 tokenTerminators =
@@ -81,6 +81,9 @@ tokenFromPunctuation punc =
 
         ';' ->
             Semicolon
+
+        ':' ->
+            Name "label"
 
         _ ->
             Fullstop
