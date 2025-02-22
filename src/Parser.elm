@@ -61,8 +61,8 @@ type ParseState
     | WithPredicate String String (Set Triple)
     | TripleFound String String (Set Triple)
     | LinkAwaitingEndpoint String (Set Triple)
-    | LinkWithEndpoint String String  (Set Triple)
-    --| LinkWithRelation String String String (Set Triple)
+    | LinkWithEndpoint String String (Set Triple)
+      --| LinkWithRelation String String String (Set Triple)
     | LinkComplete String String String (Set Triple)
     | ParseDone (Set Triple)
     | Error ParseError
@@ -127,9 +127,8 @@ asTriples tokens time =
         LinkAwaitingEndpoint subject triples ->
             Ok triples
 
-        LinkWithEndpoint fromNode toNode  triples->
+        LinkWithEndpoint fromNode toNode triples ->
             Ok triples
-
 
         LinkComplete fromNode toNode relation triples ->
             Ok triples
@@ -190,7 +189,7 @@ convertToTriples time token state =
                 _ ->
                     Error <| SubjectExpected token
 
-        LinkWithEndpoint fromNode toNode  triples->
+        LinkWithEndpoint fromNode toNode triples ->
             case token of
                 Name relation ->
                     LinkComplete fromNode toNode relation triples
@@ -200,7 +199,6 @@ convertToTriples time token state =
 
                 _ ->
                     Error <| SubjectExpected token
-
 
         LinkComplete fromNode toNode relation triplesOut ->
             -- We have all the components for a reified anonymous link node.
@@ -238,7 +236,6 @@ convertToTriples time token state =
                 _ ->
                     Error <| ObjectExpected toNode relation token
 
-
         WithPredicate subject predicate triples ->
             case token of
                 Name object ->
@@ -275,9 +272,8 @@ convertToTriples time token state =
                 Quoted string ->
                     ParseDone triples
 
-                --_ ->
-                --    Error <| PunctuationExpected subject predicate token
-
+        --_ ->
+        --    Error <| PunctuationExpected subject predicate token
         ParseDone triples ->
             state
 
@@ -290,4 +286,4 @@ makeAnonNode : Time.Posix -> String -> String -> String
 makeAnonNode seed linkFrom linkTo =
     -- Two nodes separated by "->" designates an anonymous link, we must reify.
     -- If we see these nodes again, in another sentence, we make a distinct ID.
-    "_"   ++ (String.fromInt        (Murmur3.hashString (Time.posixToMillis seed) (linkFrom ++ linkTo)))
+    "_" ++ String.fromInt (Murmur3.hashString (Time.posixToMillis seed) (linkFrom ++ linkTo))

@@ -3,9 +3,9 @@
 
 - Parse user input. Modified lex and parse.
 - Recognise Module and Diagram keywords.
-- Parse to internal structures.
-- Save to appropriate set.
-- Save to backend.
+- Parse to internal structures, using a few folds ( s -> r -> o dicts are useful ).
+- Save to Modules | Diagrams set.
+- Save to backend, forward to clients.
 - Allow selection of multiple Modules.
 - Allow selection of one Diagram.
 - Render in 3D.
@@ -18,7 +18,6 @@
 - Select files to show (in each window).
 - Select styles to apply (per window).
 - Add basic inspector.
-- Render as D2.
 
 # Discussion
 

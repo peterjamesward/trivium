@@ -3,6 +3,7 @@ module Frontend exposing (..)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import CommonUiElements exposing (..)
+import ContentFromTriples exposing (..)
 import Dict exposing (..)
 import DomainModel exposing (..)
 import Element exposing (..)
@@ -13,10 +14,9 @@ import Html.Attributes as Attr
 import Lamdera
 import Lexer exposing (..)
 import Parser exposing (..)
+import Time exposing (..)
 import Types exposing (..)
 import Url
-import Time exposing (..)
-import ContentFromTriples exposing (..)
 
 
 type alias Model =
@@ -82,12 +82,14 @@ update msg model =
                 tokens =
                     Lexer.tokenize content
 
-                parse = Parser.parseTokensToTriples (Time.millisToPosix 122) tokens
+                parse =
+                    Parser.parseTokensToTriples (Time.millisToPosix 122) tokens
 
                 aModule =
                     case parse of
                         Ok triple ->
                             Just <| ContentFromTriples.moduleFromTriples triple
+
                         _ ->
                             Nothing
 
