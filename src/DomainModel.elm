@@ -66,6 +66,8 @@ type alias Class =
 
 type alias Node =
     -- Boxes, what can contain other boxes and other non-box stuff.
+    -- Note that attributes will not show as links on the visuals, only in the inspector.
+    -- This forces the user to declare explicit links.
     { id : NodeId
     , label : String
     , class : Maybe ClassId

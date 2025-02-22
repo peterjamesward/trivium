@@ -213,10 +213,10 @@ convertToTriples time token state =
                             makeAnonNode time fromNode toNode
 
                         fromTriple =
-                            ( anonymousNode, "_FROM", fromNode )
+                            ( anonymousNode, "__FROM", fromNode )
 
                         toTriple =
-                            ( anonymousNode, "_TO", toNode )
+                            ( anonymousNode, "__TO", toNode )
 
                         baseTriple =
                             ( anonymousNode, relation, withTarget )
@@ -286,4 +286,4 @@ makeAnonNode : Time.Posix -> String -> String -> String
 makeAnonNode seed linkFrom linkTo =
     -- Two nodes separated by "->" designates an anonymous link, we must reify.
     -- If we see these nodes again, in another sentence, we make a distinct ID.
-    "_" ++ String.fromInt (Murmur3.hashString (Time.posixToMillis seed) (linkFrom ++ linkTo))
+    "__" ++ String.fromInt (Murmur3.hashString (Time.posixToMillis seed) (linkFrom ++ linkTo))

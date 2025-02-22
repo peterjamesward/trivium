@@ -1,8 +1,6 @@
 
 # WIP
 
-- Parse user input. Modified lex and parse.
-- Recognise Module and Diagram keywords.
 - Parse to internal structures, using a few folds ( s -> r -> o dicts are useful ).
 - Save to Modules | Diagrams set.
 - Save to backend, forward to clients.

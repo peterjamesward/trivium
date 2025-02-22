@@ -122,11 +122,69 @@ moduleFromTriples triples =
 
                 Nothing ->
                     Dict.empty
+
+        nodeIds : Set NodeId
+        nodeIds =
+            -- OK. Nodes. Generally, these would be declared explicitly, so the subjectRelationIndex
+            -- is our main source. However, I would like to allow `a -> b x y.` to be a valid
+            -- and sufficient input. This means we need to look at _FROM and _TO on all the links.
+            -- Luckily, we can do that almost trivially from the relationObjectIndex :)
+            -- We exclude reified links, identified by the leading underscores "__".
+            Set.union explicitNodeIds implicitNodeIds
+
+        explicitNodeIds : Set NodeId
+        explicitNodeIds =
+            indexes.subjectRelationIndex
+                |> Dict.keys
+                |> List.filter (\id -> not <| String.startsWith "__" id)
+                |> Set.fromList
+
+        implicitNodeIds : Set NodeId
+        implicitNodeIds =
+            let
+                fromNodeIds =
+                    Dict.get "__FROM" indexes.relationObjectIndex
+                        |> Maybe.withDefault Dict.empty
+                        |> Dict.keys
+                        |> Set.fromList
+
+                toNodeIds =
+                    Dict.get "__TO" indexes.relationObjectIndex
+                        |> Maybe.withDefault Dict.empty
+                        |> Dict.keys
+                        |> Set.fromList
+            in
+            Set.union fromNodeIds toNodeIds
+
+        nodes : Dict NodeId Node
+        nodes =
+            nodeIds
+                |> Set.toList
+                |> List.map (\id -> ( id, buildNode id ))
+                |> Dict.fromList
+
+        buildNode : NodeId -> Node
+        buildNode id =
+            --TODO: or implicit typing.
+            --Note we only surface one value for any attribute.
+            { id = id
+            , label = fromIndex1 id "label" indexes.subjectRelationIndex |> Maybe.withDefault ""
+            , class = fromIndex1 id "is" indexes.subjectRelationIndex
+            , attributes = flattenInnerDict id indexes.subjectRelationIndex
+            }
+
+        flattenInnerDict : String -> OuterDict -> Dict String String
+        flattenInnerDict outerKey dict =
+            -- Discard any multiple values.
+            Dict.get outerKey dict
+                |> Maybe.withDefault Dict.empty
+                |> Dict.map
+                    (\innerKey set -> set |> Set.toList |> List.head |> Maybe.withDefault "<?>")
     in
     { id = moduleId
     , label = moduleLabel
     , sourceFile = Nothing
     , classes = Dict.union allUsedClasses declaredButUnusedClasses
-    , nodes = Dict.empty
+    , nodes = nodes
     , links = Dict.empty
     }
