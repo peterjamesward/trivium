@@ -41,7 +41,7 @@ init url key =
     ( { key = key
       , message = ""
       , diagramList = []
-      , modulesList = []
+      , moduleList = []
       , modules = Dict.empty
       , aModule = Nothing
       , diagrams = Dict.empty
@@ -57,6 +57,14 @@ init url key =
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
     case msg of
+        UserClickedSave ->
+            case model.aModule of
+                Just m ->
+                    ( model, Lamdera.sendToBackend (SaveModule m) )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         UserSelectedDiagram id ->
             ( model, Lamdera.sendToBackend (AskForDiagram id) )
 
@@ -120,6 +128,11 @@ updateFromBackend msg model =
             , Cmd.none
             )
 
+        ModuleList moduleIds ->
+            ( { model | moduleList = moduleIds }
+            , Cmd.none
+            )
+
 
 view : Model -> Browser.Document FrontendMsg
 view model =
@@ -144,6 +157,10 @@ view model =
                         , placeholder = Nothing
                         , label = Input.labelHidden "content"
                         , spellcheck = False
+                        }
+                    , Input.button CommonUiElements.buttonStyles
+                        { label = text "Save"
+                        , onPress = Just UserClickedSave
                         }
                     ]
                 , column columnStyles

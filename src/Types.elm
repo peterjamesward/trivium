@@ -6,17 +6,16 @@ import Dict exposing (..)
 import DomainModel exposing (..)
 import LexerTypes exposing (..)
 import Parser exposing (..)
+import Set exposing (..)
 import Time exposing (Posix)
 import Url exposing (Url)
-import Set exposing (..)
-
 
 
 type alias FrontendModel =
     { key : Key
     , message : String
     , diagramList : List DiagramId -- full list of what is in the backend
-    , modulesList : List ModuleId -- ditto
+    , moduleList : List ModuleId -- ditto
     , modules : Dict ModuleId Module -- loaded and active.
     , aModule : Maybe Module -- being edited.
     , diagrams : Dict DiagramId Diagram
@@ -40,6 +39,7 @@ type FrontendMsg
     | UserSelectedDiagram DiagramId
     | UserUpdatedContent String
     | NoOpFrontendMsg
+    | UserClickedSave
 
 
 type ToBackend
@@ -47,6 +47,7 @@ type ToBackend
     | DiagramChangedAtFront Diagram -- leaves some room for optimisation!
     | AskForDiagramList
     | AskForDiagram DiagramId
+    | SaveModule Module
 
 
 type BackendMsg
@@ -58,3 +59,4 @@ type ToFrontend
     = NoOpToFrontend
     | DiagramList (List DiagramId)
     | DiagramContent Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.
+    | ModuleList (List ModuleId)
