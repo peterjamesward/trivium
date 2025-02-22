@@ -17,6 +17,7 @@ import Parser exposing (..)
 import Time exposing (..)
 import Types exposing (..)
 import Url
+import ViewCatalogue exposing (..)
 
 
 type alias Model =
@@ -92,9 +93,6 @@ update msg model =
 
                         _ ->
                             Nothing
-
-                _ =
-                    Debug.log "Module" aModule
             in
             ( { model
                 | contentEditArea = content
@@ -149,7 +147,7 @@ view model =
                         }
                     ]
                 , column columnStyles
-                    [ text "Reserved for future functionality."
+                    [ ViewCatalogue.showCatalogue model.aModule
                     ]
                 ]
         ]
