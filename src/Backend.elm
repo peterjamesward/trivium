@@ -44,17 +44,26 @@ updateFromFrontend sessionId clientId msg model =
     case msg of
         RequestModule id ->
             case Dict.get id model.modules of
-                Just m ->
+                Just triples ->
                     ( model
-                    , Lamdera.sendToFrontend clientId (ModuleContent m)
+                    , Lamdera.sendToFrontend clientId (ModuleContent id triples)
                     )
 
                 Nothing ->
                     ( model, Cmd.none )
 
-        SaveModule mod ->
-            ( { model | modules = Dict.insert mod.id mod model.modules }
-            , Lamdera.broadcast (ModuleList (Dict.keys model.modules))
+        RequestModuleList ->
+            ( model
+            , Lamdera.sendToFrontend clientId (ModuleList <| Dict.keys model.modules)
+            )
+
+        SaveModule id triples ->
+            let
+                updated =
+                    Dict.insert id triples model.modules
+            in
+            ( { model | modules = updated }
+            , Lamdera.broadcast (ModuleList (Dict.keys updated))
             )
 
         NoOpToBackend ->

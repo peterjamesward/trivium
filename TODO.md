@@ -1,13 +1,15 @@
 
 # WIP
 
-- Parse to internal structures, using a few folds ( s -> r -> o dicts are useful ).
-- Save to Modules | Diagrams set.
-- Save to backend, forward to clients.
+- Check content of Module sent to backend, and correct dictionary entry.
+- Write canonical text for active module in edit box.
+- Render in 3D. (Need to recreate the forces for links.)
+- Bisect (or trisect) edges to allow for parallel links.
 - Allow selection of multiple Modules.
 - Allow selection of one Diagram.
-- Render in 3D.
+- Overhaul the UI.
 - Make multiple tabs in main window (input | output).
+
 - Add Inspector pane.
 - Save to file.
 - File load.

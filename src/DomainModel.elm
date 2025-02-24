@@ -77,7 +77,7 @@ type alias Node =
     -- Note that attributes will not show as links on the visuals, only in the inspector.
     -- This forces the user to declare explicit links.
     { id : NodeId
-    , label : String
+    , label : Maybe String
     , class : Maybe ClassId
     , attributes : InnerDict
     }

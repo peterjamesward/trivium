@@ -1,5 +1,6 @@
 module Frontend exposing (..)
 
+import AsText exposing (moduleToText)
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
 import CommonUiElements exposing (..)
@@ -9,6 +10,7 @@ import DomainModel exposing (..)
 import Element exposing (..)
 import Element.Font as Font
 import Element.Input as Input
+import Force3DLayout
 import Html
 import Html.Attributes as Attr
 import Lamdera
@@ -47,27 +49,42 @@ init url key =
       , diagrams = Dict.empty
       , contentEditArea = ""
       , tokenizedInput = []
-      , visual = Nothing
       , parseStatus = Err "nothing to parse"
+      , visual3d = Force3DLayout.init ( 600, 400 )
       }
-    , Lamdera.sendToBackend AskForDiagramList
+    , Lamdera.sendToBackend RequestModuleList
     )
 
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
     case msg of
+        Force3DMsg forceMsg ->
+            case model.aModule of
+                Just activeModule ->
+                    --TODO: Allow for multiple open modules.
+                    let
+                        ( newVisual, ignoreClick ) =
+                            Force3DLayout.update forceMsg activeModule model.visual3d
+                    in
+                    ( { model | visual3d = newVisual }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         UserClickedModuleId mId ->
             ( model
             , Lamdera.sendToBackend (RequestModule mId)
             )
 
         UserClickedSave ->
-            case model.aModule of
-                Just m ->
-                    ( model, Lamdera.sendToBackend (SaveModule m) )
+            case ( model.aModule, model.parseStatus ) of
+                ( Just m, Ok triples ) ->
+                    ( model, Lamdera.sendToBackend (SaveModule m.id triples) )
 
-                Nothing ->
+                _ ->
                     ( model, Cmd.none )
 
         UserSelectedDiagram id ->
@@ -106,12 +123,22 @@ update msg model =
 
                         _ ->
                             Nothing
+
+                _ =
+                    Debug.log "PARSE" parse
             in
             ( { model
                 | contentEditArea = content
                 , tokenizedInput = tokens
                 , parseStatus = parse
                 , aModule = aModule
+                , visual3d =
+                    case aModule of
+                        Just isModule ->
+                            Force3DLayout.initialiseWithSemantics isModule model.visual3d
+
+                        Nothing ->
+                            model.visual3d
               }
             , Cmd.none
             )
@@ -138,8 +165,16 @@ updateFromBackend msg model =
             , Cmd.none
             )
 
-        ModuleContent m ->
-            ( { model | aModule = Just m }
+        ModuleContent id triples ->
+            let
+                newModule =
+                    moduleFromTriples triples
+            in
+            ( { model
+                | aModule = Just newModule
+                , visual3d = Force3DLayout.initialiseWithSemantics newModule model.visual3d
+                , contentEditArea = AsText.moduleToText newModule
+              }
             , Cmd.none
             )
 
@@ -174,7 +209,8 @@ view model =
                         }
                     ]
                 , column columnStyles
-                    [ ViewCatalogue.showCatalogue model.aModule
+                    [ -- ViewCatalogue.showCatalogue model.aModule
+                      Force3DLayout.view Force3DMsg model.visual3d
                     ]
                 , column columnStyles
                     [ model.moduleList

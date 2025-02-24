@@ -73,7 +73,7 @@ moduleFromTriples triples =
 
         moduleId =
             fromIndex1 "Module" "is" indexes.objectRelationIndex
-                |> Maybe.withDefault "no module"
+                |> Maybe.withDefault "unnamed"
 
         moduleLabel =
             fromIndex1 moduleId "label" indexes.subjectRelationIndex
@@ -87,9 +87,9 @@ moduleFromTriples triples =
             Dict.get "is" indexes.relationObjectIndex
                 |> Maybe.withDefault Dict.empty
                 |> Dict.map
-                    (\class members ->
-                        { id = class
-                        , label = fromIndex1 class "label" indexes.subjectRelationIndex
+                    (\id members ->
+                        { id = id
+                        , label = fromIndex1 id "label" indexes.subjectRelationIndex
                         , nodeIds = members
                         }
                     )
@@ -97,8 +97,8 @@ moduleFromTriples triples =
         declaredButUnusedClasses =
             -- Make a class record for any type that was declared but not used.
             case Dict.get "Type" allUsedClasses of
-                Just classes ->
-                    classes.nodeIds
+                Just declaredClasses ->
+                    declaredClasses.nodeIds
                         |> Set.filter (\classId -> not <| Dict.member classId allUsedClasses)
                         |> Set.toList
                         |> List.map
@@ -151,6 +151,7 @@ moduleFromTriples triples =
         nodes : Dict NodeId Node
         nodes =
             nodeIds
+                |> Set.filter (\id -> not <| Dict.member id allUsedClasses)
                 |> Set.toList
                 |> List.map (\id -> ( id, buildNode id ))
                 |> Dict.fromList
@@ -160,9 +161,15 @@ moduleFromTriples triples =
             --TODO: or implicit typing.
             --Note we only surface one value for any attribute.
             { id = id
-            , label = fromIndex1 id "label" indexes.subjectRelationIndex |> Maybe.withDefault ""
+            , label = fromIndex1 id "label" indexes.subjectRelationIndex
             , class = fromIndex1 id "is" indexes.subjectRelationIndex
-            , attributes = Dict.get id indexes.subjectRelationIndex |> Maybe.withDefault Dict.empty
+            , attributes =
+                Dict.get id indexes.subjectRelationIndex
+                    |> Maybe.withDefault Dict.empty
+                    |> Dict.filter
+                        (\relation objects ->
+                            not <| Set.member relation (Set.fromList [ "is", "label" ])
+                        )
             }
 
         links =
@@ -179,13 +186,26 @@ moduleFromTriples triples =
             , toNode = fromIndex1 anon "__TO" indexes.subjectRelationIndex |> Maybe.withDefault ""
             , label = fromIndex1 anon "label" indexes.subjectRelationIndex |> Maybe.withDefault ""
             , class = fromIndex1 anon "is" indexes.subjectRelationIndex
-            , attributes = inner
+            , attributes =
+                inner
+                    |> Dict.filter
+                        (\relation objects ->
+                            not <| Set.member relation (Set.fromList [ "is", "label", "__FROM", "__TO" ])
+                        )
             }
+
+        classes =
+            Dict.union allUsedClasses declaredButUnusedClasses
+                |> Dict.filter
+                    (\id class ->
+                        -- Remove reserved words.
+                        not <| Set.member id (Set.fromList [ "Type", "Module" ])
+                    )
     in
     { id = moduleId
     , label = moduleLabel
-    , sourceFile = Nothing
-    , classes = Dict.union allUsedClasses declaredButUnusedClasses
+    , sourceFile = fromIndex1 moduleId "source" indexes.subjectRelationIndex
+    , classes = classes
     , nodes = nodes
     , links = links
     }

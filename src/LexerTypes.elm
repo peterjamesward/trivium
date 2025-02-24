@@ -6,8 +6,6 @@ type LexerState
     | ChompingToken (List Char)
     | ChompingString (List Char)
     | StringEscape (List Char)
-    | ChompingTag (List Char)
-    | OptionalTagAfterString (List Char)
 
 
 type alias Lexing =

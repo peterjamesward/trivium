@@ -4,6 +4,7 @@ import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Dict exposing (..)
 import DomainModel exposing (..)
+import Force3DLayout
 import LexerTypes exposing (..)
 import Parser exposing (..)
 import Set exposing (..)
@@ -21,14 +22,14 @@ type alias FrontendModel =
     , diagrams : Dict DiagramId Diagram
     , contentEditArea : String -- place to enter and edit modules and diagrams
     , tokenizedInput : List Token -- live parsing and errors.
-    , visual : Maybe String -- will become a 3d visualisation.
     , parseStatus : Result String (Set Triple)
+    , visual3d : Force3DLayout.Model
     }
 
 
 type alias BackendModel =
     { message : String
-    , modules : Dict ModuleId Module
+    , modules : Dict ModuleId (Set Triple)
     , diagrams : Dict DiagramId Diagram
     }
 
@@ -41,6 +42,7 @@ type FrontendMsg
     | NoOpFrontendMsg
     | UserClickedSave
     | UserClickedModuleId ModuleId
+    | Force3DMsg Force3DLayout.Msg
 
 
 type ToBackend
@@ -48,8 +50,9 @@ type ToBackend
     | DiagramChangedAtFront Diagram -- leaves some room for optimisation!
     | AskForDiagramList
     | AskForDiagram DiagramId
-    | SaveModule Module
+    | SaveModule String (Set Triple)
     | RequestModule ModuleId
+    | RequestModuleList
 
 
 type BackendMsg
@@ -62,4 +65,4 @@ type ToFrontend
     | DiagramList (List DiagramId)
     | DiagramContent Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.
     | ModuleList (List ModuleId)
-    | ModuleContent Module
+    | ModuleContent ModuleId (Set Triple)

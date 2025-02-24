@@ -109,9 +109,6 @@ nextCharacter char lex =
             else if char == '"' then
                 { nextLex | state = ChompingString [ char ] }
 
-            else if char == '^' then
-                { nextLex | state = ChompingTag [] }
-
             else if Set.member char punctuation then
                 { nextLex
                     | state = LookingForTokenStart
@@ -150,9 +147,16 @@ nextCharacter char lex =
             -- Consume input until unescaped double quote.
             if char == '"' then
                 -- Don't save token until we see if there is a tag.
-                { nextLex
-                    | state = OptionalTagAfterString <| char :: reversed
-                }
+                let
+                    newToken =
+                        Quoted <| (String.fromList <| List.reverse reversed)
+                in
+                nextCharacter
+                    char
+                    { lex
+                        | state = LookingForTokenStart
+                        , tokens = newToken :: lex.tokens
+                    }
 
             else if char == '\\' then
                 { nextLex | state = StringEscape reversed }
@@ -162,49 +166,3 @@ nextCharacter char lex =
 
         StringEscape reversed ->
             { nextLex | state = ChompingString <| char :: '\\' :: reversed }
-
-        OptionalTagAfterString reversed ->
-            if char == '^' then
-                { nextLex | state = ChompingTag <| char :: reversed }
-
-            else
-                -- No tag. Behave as if we await next token without consuming char.
-                -- TODO: Shall we default to 'string' tag?
-                let
-                    newToken =
-                        Quoted <| ((String.fromList <| List.reverse reversed) ++ "^^string")
-                in
-                nextCharacter
-                    char
-                    { lex
-                        | state = LookingForTokenStart
-                        , tokens = newToken :: lex.tokens
-                    }
-
-        ChompingTag reversed ->
-            -- Being a bit lazy here.
-            if char == '^' then
-                { nextLex | state = ChompingTag <| char :: reversed }
-
-            else if Set.member char whitespace then
-                let
-                    taggedValue =
-                        Quoted <| String.fromList <| List.reverse <| reversed
-                in
-                { nextLex
-                    | state = LookingForTokenStart
-                    , tokens = taggedValue :: nextLex.tokens
-                }
-
-            else if Set.member char punctuation then
-                let
-                    taggedValue =
-                        Quoted <| String.fromList <| List.reverse <| reversed
-                in
-                { nextLex
-                    | state = LookingForTokenStart
-                    , tokens = tokenFromPunctuation char :: taggedValue :: nextLex.tokens
-                }
-
-            else
-                { nextLex | state = ChompingTag <| char :: reversed }
