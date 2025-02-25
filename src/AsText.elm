@@ -66,11 +66,13 @@ withNodes nodes =
     let
         attribute : String -> Set String -> String
         attribute relation objects =
-            "    "
-                ++ relation
-                ++ " "
-                ++ (objects |> Set.toList |> String.join """, 
-            """)
+            String.concat
+                [ " "
+                , relation
+                , " "
+                , objects |> Set.toList |> String.join """, 
+    """
+                ]
 
         phrases : Node -> String
         phrases node =
@@ -86,7 +88,16 @@ withNodes nodes =
     in
     (nodes
         |> Dict.values
-        |> List.map (\node -> node.id ++ phrases node)
+        |> List.filterMap
+            (\node ->
+                -- Elide nodes with nothing useful to say.
+                case phrases node of
+                    "" ->
+                        Nothing
+
+                    somePhrases ->
+                        Just <| node.id ++ somePhrases
+            )
         |> String.join """.
     
 """
@@ -131,8 +142,13 @@ withLinks links =
     
 """
     )
-        ++ """.
+        ++ (if Dict.isEmpty links then
+                ""
+
+            else
+                """.
 """
+           )
 
 
 safely : String -> String

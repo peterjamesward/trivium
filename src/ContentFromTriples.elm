@@ -152,6 +152,8 @@ moduleFromTriples triples =
         nodes =
             nodeIds
                 |> Set.filter (\id -> not <| Dict.member id allUsedClasses)
+                |> Set.filter (\id -> id /= moduleId)
+                -- special case.
                 |> Set.toList
                 |> List.map (\id -> ( id, buildNode id ))
                 |> Dict.fromList
