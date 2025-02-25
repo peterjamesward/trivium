@@ -124,11 +124,11 @@ init ( width, height ) =
     }
 
 
-initialiseWithSemantics :
+computeInitialPositions :
     Module
     -> Model
     -> Model
-initialiseWithSemantics content model =
+computeInitialPositions content model =
     let
         nodeLocations : List (Point3d Meters WorldCoordinates)
         nodeLocations =
@@ -146,7 +146,9 @@ initialiseWithSemantics content model =
         linkPositions : Dict LinkId (Point3d Meters WorldCoordinates)
         linkPositions =
             -- We use a central point for each link, to allow parallel links
-            -- and possibility of curved links later.
+            -- and possibility of curved links later. The reified link id acts
+            -- in the dictionary like a virtual node, so the force layout
+            -- works seamlessly.
             content.links
                 |> Dict.map
                     (\id link ->
@@ -166,36 +168,50 @@ initialiseWithSemantics content model =
             -- both string ids really
             Dict.union nodePositions linkPositions
 
+        modelWithInitialPositions =
+            { model | positions = linksAndNodes }
+    in
+    makeMeshFromCurrentPositions content.nodes content.links modelWithInitialPositions
+
+
+makeMeshFromCurrentPositions :
+    Dict NodeId Node
+    -> Dict LinkId Link
+    -> Model
+    -> Model
+makeMeshFromCurrentPositions nodes links model =
+    let
         nodeMesh =
-            -- Try just to put spheres on the screen.
-            --TODO: Links, including intermediate points.
             --TODO: Put back the forces and animation.
             --TODO: SVG overlay.
             --TODO: Invert 2d points for click lookup. ( point -> Node | Link ).
-            nodePositions
-                |> Dict.values
-                |> List.map
-                    (Sphere3d.withRadius (Length.meters 8)
-                        >> Scene3d.sphere (Material.color Color.red)
+            nodes
+                |> Dict.keys
+                |> List.filterMap
+                    (\nodeId ->
+                        case Dict.get nodeId model.positions of
+                            Just position ->
+                                Sphere3d.withRadius (Length.meters 8) position
+                                    |> Scene3d.sphere (Material.color Color.red)
+                                    |> Just
+
+                            Nothing ->
+                                Nothing
                     )
 
         linkMesh =
-            -- We use a central point for each link, to allow parallel links
-            -- and possibility of curved links later.
-            content.links
+            -- NOTE: The linkId acts like a virtual node in the positions dict.
+            links
                 |> Dict.values
                 |> List.concatMap
                     (\link ->
                         case
-                            ( Dict.get link.fromNode nodePositions
-                            , Dict.get link.toNode nodePositions
+                            ( Dict.get link.fromNode model.positions
+                            , Dict.get link.linkId model.positions
+                            , Dict.get link.toNode model.positions
                             )
                         of
-                            ( Just from, Just to ) ->
-                                let
-                                    mid =
-                                        Point3d.midpoint from to
-                                in
+                            ( Just from, Just mid, Just to ) ->
                                 [ Cylinder3d.from from mid (Length.meters 2)
                                 , Cylinder3d.from mid to (Length.meters 2)
                                 ]
@@ -207,8 +223,7 @@ initialiseWithSemantics content model =
                     )
     in
     { model
-        | positions = linksAndNodes
-        , timeLayoutBegan = model.lastTick
+        | timeLayoutBegan = model.lastTick
         , scene = nodeMesh ++ linkMesh
     }
 
@@ -686,5 +701,8 @@ applyForces nodes links model =
                         position
                             |> Point3d.translateBy (Vector3d.scaleBy model.timeDelta force)
                     )
+
+        modelWithNewPositions =
+            { model | positions = newPositions }
     in
-    { model | positions = newPositions }
+    makeMeshFromCurrentPositions nodes links modelWithNewPositions

@@ -1,14 +1,14 @@
 
 # WIP
 
-- Check content of Module sent to backend, and correct dictionary entry.
-- Write canonical text for active module in edit box.
 - Render in 3D. (Need to recreate the forces for links.)
 - Bisect (or trisect) edges to allow for parallel links.
+- Use time as seed for reified node id.
 - Allow selection of multiple Modules.
 - Allow selection of one Diagram.
 - Overhaul the UI.
 - Make multiple tabs in main window (input | output).
+- Option to show all triples as "non-semantic" graph.
 
 - Add Inspector pane.
 - Save to file.

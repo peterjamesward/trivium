@@ -33,7 +33,7 @@ app =
         , onUrlChange = UrlChanged
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \m -> Sub.none
+        , subscriptions = subscriptions
         , view = view
         }
 
@@ -41,6 +41,7 @@ app =
 init : Url.Url -> Nav.Key -> ( Model, Cmd FrontendMsg )
 init url key =
     ( { key = key
+      , time = Time.millisToPosix 0
       , message = ""
       , diagramList = []
       , moduleList = []
@@ -56,9 +57,22 @@ init url key =
     )
 
 
+subscriptions : Model -> Sub FrontendMsg
+subscriptions model =
+    Sub.batch
+        [ Time.every 10000 Tick
+        , Force3DLayout.subscriptions Force3DMsg model.visual3d
+        ]
+
+
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
     case msg of
+        Tick now ->
+            ( { model | time = now }
+            , Cmd.none
+            )
+
         Force3DMsg forceMsg ->
             case model.aModule of
                 Just activeModule ->
@@ -123,9 +137,6 @@ update msg model =
 
                         _ ->
                             Nothing
-
-                _ =
-                    Debug.log "PARSE" parse
             in
             ( { model
                 | contentEditArea = content
@@ -135,7 +146,7 @@ update msg model =
                 , visual3d =
                     case aModule of
                         Just isModule ->
-                            Force3DLayout.initialiseWithSemantics isModule model.visual3d
+                            Force3DLayout.computeInitialPositions isModule model.visual3d
 
                         Nothing ->
                             model.visual3d
@@ -172,7 +183,7 @@ updateFromBackend msg model =
             in
             ( { model
                 | aModule = Just newModule
-                , visual3d = Force3DLayout.initialiseWithSemantics newModule model.visual3d
+                , visual3d = Force3DLayout.computeInitialPositions newModule model.visual3d
                 , contentEditArea = AsText.moduleToText newModule
               }
             , Cmd.none

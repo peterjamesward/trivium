@@ -14,6 +14,7 @@ import Url exposing (Url)
 
 type alias FrontendModel =
     { key : Key
+    , time : Time.Posix
     , message : String
     , diagramList : List DiagramId -- full list of what is in the backend
     , moduleList : List ModuleId -- ditto
@@ -43,6 +44,7 @@ type FrontendMsg
     | UserClickedSave
     | UserClickedModuleId ModuleId
     | Force3DMsg Force3DLayout.Msg
+    | Tick Time.Posix
 
 
 type ToBackend
