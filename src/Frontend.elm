@@ -123,9 +123,17 @@ update msg model =
             ( model, Cmd.none )
 
         UserUpdatedContent content ->
+            ( { model
+                | contentEditArea = content
+                , parseStatus = Err "not parsed"
+              }
+            , Cmd.none
+            )
+
+        UserClickedParse ->
             let
                 tokens =
-                    Lexer.tokenize content
+                    Lexer.tokenize model.contentEditArea
 
                 parse =
                     Parser.parseTokensToTriples (Time.millisToPosix 122) tokens
@@ -139,8 +147,7 @@ update msg model =
                             Nothing
             in
             ( { model
-                | contentEditArea = content
-                , tokenizedInput = tokens
+                | tokenizedInput = tokens
                 , parseStatus = parse
                 , aModule = aModule
                 , visual3d =
@@ -179,8 +186,8 @@ updateFromBackend msg model =
         ModuleContent id triples ->
             let
                 newModule =
-                    Debug.log "MODULE" <|
-                        moduleFromTriples triples
+                    -- Debug.log "MODULE" <|
+                    moduleFromTriples triples
             in
             ( { model
                 | aModule = Just newModule
@@ -216,9 +223,18 @@ view model =
                         , spellcheck = False
                         }
                     , Input.button CommonUiElements.buttonStyles
-                        { label = text "Save"
-                        , onPress = Just UserClickedSave
+                        { label = text "Parse"
+                        , onPress = Just UserClickedParse
                         }
+                    , case model.parseStatus of
+                        Ok _ ->
+                            Input.button CommonUiElements.buttonStyles
+                                { label = text "Save"
+                                , onPress = Just UserClickedSave
+                                }
+
+                        Err error ->
+                            CommonUiElements.disabledButton error
                     ]
                 , column columnStyles
                     [ -- ViewCatalogue.showCatalogue model.aModule

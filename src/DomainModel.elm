@@ -69,6 +69,7 @@ type alias Class =
     { id : ClassId
     , label : Maybe String
     , nodeIds : Set NodeId
+    , attributes : InnerDict
     }
 
 

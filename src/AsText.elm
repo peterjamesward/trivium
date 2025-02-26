@@ -23,6 +23,23 @@ moduleHeader m =
 
 withClasses : Dict ClassId Class -> String
 withClasses classes =
+    let
+        attribute : String -> Set String -> String
+        attribute relation objects =
+            String.concat
+                [ "; "
+                , relation
+                , " "
+                , objects |> Set.toList |> String.join """, 
+    """
+                ]
+
+        phrases : Class -> String
+        phrases class =
+            (Dict.map attribute class.attributes |> Dict.values)
+                |> String.join """;
+"""
+    in
     classes
         |> Dict.values
         |> List.map
@@ -38,6 +55,8 @@ withClasses classes =
                             Nothing ->
                                 ""
                        )
+                    -- Elide nodes with nothing useful to say.
+                    ++ phrases class
                     ++ """ .
 """
             )

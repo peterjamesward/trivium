@@ -91,6 +91,13 @@ moduleFromTriples triples =
                         { id = id
                         , label = fromIndex1 id "label" indexes.subjectRelationIndex
                         , nodeIds = members
+                        , attributes =
+                            Dict.get id indexes.subjectRelationIndex
+                                |> Maybe.withDefault Dict.empty
+                                |> Dict.filter
+                                    (\relation objects ->
+                                        not <| Set.member relation (Set.fromList [ "is", "label" ])
+                                    )
                         }
                     )
 
@@ -107,6 +114,13 @@ moduleFromTriples triples =
                                 , { id = classId
                                   , label = fromIndex1 classId "label" indexes.subjectRelationIndex
                                   , nodeIds = Set.empty
+                                  , attributes =
+                                        Dict.get classId indexes.subjectRelationIndex
+                                            |> Maybe.withDefault Dict.empty
+                                            |> Dict.filter
+                                                (\relation objects ->
+                                                    not <| Set.member relation (Set.fromList [ "is", "label" ])
+                                                )
                                   }
                                 )
                             )

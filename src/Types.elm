@@ -45,6 +45,7 @@ type FrontendMsg
     | UserClickedModuleId ModuleId
     | Force3DMsg Force3DLayout.Msg
     | Tick Time.Posix
+    | UserClickedParse
 
 
 type ToBackend

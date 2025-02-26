@@ -1,7 +1,7 @@
 
 # WIP
 
-- Make sure that failed parse disables Save button.
+- Don't parse while typing!
 - Render in 3D. (Need to recreate the field forces for links.)
 - SVG overlay
 
