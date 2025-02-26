@@ -192,7 +192,7 @@ updateFromBackend msg model =
 
 view : Model -> Browser.Document FrontendMsg
 view model =
-    { title = "PEATmagic"
+    { title = "Welcome to the Trivium"
     , body =
         [ layout
             [ width fill

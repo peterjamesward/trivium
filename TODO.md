@@ -1,8 +1,12 @@
 
 # WIP
 
+- Allow "x y." as synonym for "y is x.". Permits "Module y." amongst other things.
+- Make sure that failed parse cannot overwrite saved Module!
+- Report lex and parse errors with line and column.
 - Render in 3D. (Need to recreate the forces for links.)
-- Bisect (or trisect) edges to allow for parallel links.
+- SVG overlay
+
 - Use time as seed for reified node id.
 - Allow selection of multiple Modules.
 - Allow selection of one Diagram.
@@ -18,6 +22,8 @@
 - Select files to show (in each window).
 - Select styles to apply (per window).
 - Add basic inspector.
+
+- Add Clockwise and Anticlockwise link alignment fields.
 
 # Discussion
 

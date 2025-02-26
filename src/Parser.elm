@@ -62,7 +62,6 @@ type ParseState
     | TripleFound String String (Set Triple)
     | LinkAwaitingEndpoint String (Set Triple)
     | LinkWithEndpoint String String (Set Triple)
-      --| LinkWithRelation String String String (Set Triple)
     | LinkComplete String String String (Set Triple)
     | ParseDone (Set Triple)
     | Error ParseError
@@ -149,141 +148,150 @@ asTriples tokens time =
 
 convertToTriples : Time.Posix -> Token -> ParseState -> ParseState
 convertToTriples time token state =
-    case state of
-        AwaitingSubject triples ->
-            case token of
-                Name subject ->
-                    WithSubject subject triples
+    let
+        _ =
+            Debug.log "OLDTSTATE" state
 
-                Fullstop ->
-                    ParseDone triples
+        newState =
+            Debug.log "NEWSTATE" <|
+                case state of
+                    AwaitingSubject triples ->
+                        case token of
+                            Name subject ->
+                                WithSubject subject triples
 
-                _ ->
-                    Error <| SubjectExpected token
+                            Fullstop ->
+                                ParseDone triples
 
-        WithSubject subject triples ->
-            case token of
-                Name "->" ->
-                    -- Special case creates anonymous node.
-                    LinkAwaitingEndpoint subject triples
+                            _ ->
+                                Error <| SubjectExpected token
 
-                Name predicate ->
-                    WithPredicate subject predicate triples
+                    WithSubject subject triples ->
+                        case token of
+                            Name "->" ->
+                                -- Special case creates anonymous node.
+                                LinkAwaitingEndpoint subject triples
 
-                _ ->
-                    Error <| PredicateExpected subject token
+                            Name predicate ->
+                                WithPredicate subject predicate triples
 
-        LinkAwaitingEndpoint fromNode triples ->
-            -- We have seen "->" and should see the second node.
-            -- Make new anonymous node.
-            -- Reify with the supplied from and to nodes.
-            -- Remaining phrases apply to the anon node.
-            -- TODO: Actually need to defer the reification until we have the whole phrase!
-            case token of
-                Name toNode ->
-                    LinkWithEndpoint fromNode toNode triples
+                            _ ->
+                                Error <| PredicateExpected subject token
 
-                Fullstop ->
-                    ParseDone triples
+                    LinkAwaitingEndpoint fromNode triples ->
+                        -- We have seen "->" and should see the second node.
+                        -- Make new anonymous node.
+                        -- Reify with the supplied from and to nodes.
+                        -- Remaining phrases apply to the anon node.
+                        -- TODO: Actually need to defer the reification until we have the whole phrase!
+                        case token of
+                            Name toNode ->
+                                LinkWithEndpoint fromNode toNode triples
 
-                _ ->
-                    Error <| SubjectExpected token
+                            Fullstop ->
+                                ParseDone triples
 
-        LinkWithEndpoint fromNode toNode triples ->
-            case token of
-                Name relation ->
-                    LinkComplete fromNode toNode relation triples
+                            _ ->
+                                Error <| SubjectExpected token
 
-                Fullstop ->
-                    ParseDone triples
+                    LinkWithEndpoint fromNode toNode triples ->
+                        case token of
+                            Name relation ->
+                                LinkComplete fromNode toNode relation triples
 
-                _ ->
-                    Error <| SubjectExpected token
+                            Fullstop ->
+                                ParseDone triples
 
-        LinkComplete fromNode toNode relation triplesOut ->
-            -- We have all the components for a reified anonymous link node.
-            -- We emit the necessary triples then allow the parse to continue as if
-            -- the user had typed in the "anonymous" node!
-            let
-                reifyWithTarget : String -> ParseState
-                reifyWithTarget withTarget =
-                    -- Can use this for named nodes and quoted values, is the plan.
-                    let
-                        anonymousNode =
-                            makeAnonNode time fromNode toNode
+                            _ ->
+                                Error <| SubjectExpected token
 
-                        fromTriple =
-                            ( anonymousNode, "__FROM", fromNode )
+                    LinkComplete fromNode toNode relation triples ->
+                        -- We have the "X -> y :" but we need the actual label to disambinguate.
+                        -- We have all the components for a reified anonymous link node.
+                        -- We emit the necessary triples then allow the parse to continue as if
+                        -- the user had typed in the "anonymous" node!
+                        let
+                            reifyWithTarget : String -> ParseState
+                            reifyWithTarget label =
+                                -- Can use this for named nodes and quoted values, is the plan.
+                                let
+                                    anonymousNode =
+                                        makeAnonNode time fromNode toNode label
 
-                        toTriple =
-                            ( anonymousNode, "__TO", toNode )
+                                    fromTriple =
+                                        ( anonymousNode, "__FROM", fromNode )
 
-                        baseTriple =
-                            ( anonymousNode, relation, withTarget )
+                                    toTriple =
+                                        ( anonymousNode, "__TO", toNode )
 
-                        newTriples =
-                            Set.fromList [ fromTriple, toTriple, baseTriple ]
-                    in
-                    TripleFound anonymousNode relation (Set.union newTriples triplesOut)
-            in
-            case token of
-                Name object ->
-                    reifyWithTarget object
+                                    labelTriple =
+                                        ( anonymousNode, "label", label )
 
-                Quoted value ->
-                    reifyWithTarget value
+                                    newTriples =
+                                        Set.fromList [ fromTriple, toTriple, labelTriple ]
+                                in
+                                TripleFound anonymousNode label (Set.union newTriples triples)
+                        in
+                        case token of
+                            Name label ->
+                                reifyWithTarget label
 
-                _ ->
-                    Error <| ObjectExpected toNode relation token
+                            Quoted value ->
+                                reifyWithTarget value
 
-        WithPredicate subject predicate triples ->
-            case token of
-                Name object ->
-                    let
-                        newTriple =
-                            ( subject, predicate, object )
-                    in
-                    TripleFound subject predicate (Set.insert newTriple triples)
+                            _ ->
+                                Error <| ObjectExpected toNode relation token
 
-                Quoted value ->
-                    let
-                        newTriple =
-                            ( subject, predicate, value )
-                    in
-                    TripleFound subject predicate (Set.insert newTriple triples)
+                    WithPredicate subject predicate triples ->
+                        case token of
+                            Name object ->
+                                let
+                                    newTriple =
+                                        ( subject, predicate, object )
+                                in
+                                TripleFound subject predicate (Set.insert newTriple triples)
 
-                _ ->
-                    Error <| ObjectExpected subject predicate token
+                            Quoted value ->
+                                let
+                                    newTriple =
+                                        ( subject, predicate, value )
+                                in
+                                TripleFound subject predicate (Set.insert newTriple triples)
 
-        TripleFound subject predicate triples ->
-            case token of
-                Name string ->
-                    Error <| PunctuationExpected subject predicate token
+                            _ ->
+                                Error <| ObjectExpected subject predicate token
 
-                Comma ->
-                    WithPredicate subject predicate triples
+                    TripleFound subject predicate triples ->
+                        case token of
+                            Name string ->
+                                Error <| PunctuationExpected subject predicate token
 
-                Semicolon ->
-                    WithSubject subject triples
+                            Comma ->
+                                WithPredicate subject predicate triples
 
-                Fullstop ->
-                    AwaitingSubject triples
+                            Semicolon ->
+                                WithSubject subject triples
 
-                Quoted string ->
-                    ParseDone triples
+                            Fullstop ->
+                                AwaitingSubject triples
 
-        --_ ->
-        --    Error <| PunctuationExpected subject predicate token
-        ParseDone triples ->
-            state
+                            Quoted string ->
+                                ParseDone triples
 
-        Error parseError ->
-            --TODO: Abandon fold on error.
-            state
+                    --_ ->
+                    --    Error <| PunctuationExpected subject predicate token
+                    ParseDone triples ->
+                        state
+
+                    Error parseError ->
+                        --TODO: Abandon fold on error.
+                        state
+    in
+    newState
 
 
-makeAnonNode : Time.Posix -> String -> String -> String
-makeAnonNode seed linkFrom linkTo =
+makeAnonNode : Time.Posix -> String -> String -> String -> String
+makeAnonNode seed linkFrom linkTo label =
     -- Two nodes separated by "->" designates an anonymous link, we must reify.
     -- If we see these nodes again, in another sentence, we make a distinct ID.
-    "__" ++ String.fromInt (Murmur3.hashString (Time.posixToMillis seed) (linkFrom ++ linkTo))
+    "__" ++ String.fromInt (Murmur3.hashString (Time.posixToMillis seed) (linkFrom ++ linkTo ++ label))

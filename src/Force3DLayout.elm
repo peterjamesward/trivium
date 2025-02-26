@@ -129,40 +129,34 @@ computeInitialPositions :
     -> Model
     -> Model
 computeInitialPositions content model =
+    -- Must make sure that parallel links are separated at the start, so the repulsion works.
+    -- Do this by treating the virtual nodes (link midpoints) the same as real nodes.
     let
-        nodeLocations : List (Point3d Meters WorldCoordinates)
-        nodeLocations =
+        nodeCircle : List (Point3d Meters WorldCoordinates)
+        nodeCircle =
             -- Start by distributing nodes arbitrarily (not randomly) around a circle.
             Circle3d.withRadius (Length.meters 100) Direction3d.z Point3d.origin
                 |> Circle3d.toArc
                 |> Arc3d.segments (Dict.size content.nodes)
                 |> Polyline3d.vertices
 
+        linkCircle : List (Point3d Meters WorldCoordinates)
+        linkCircle =
+            -- Start by distributing nodes arbitrarily (not randomly) around a circle.
+            Circle3d.withRadius (Length.meters 50) Direction3d.z Point3d.origin
+                |> Circle3d.toArc
+                |> Arc3d.segments (Dict.size content.links)
+                |> Polyline3d.vertices
+
         nodePositions : Dict NodeId (Point3d Meters WorldCoordinates)
         nodePositions =
-            List.Extra.zip (Dict.keys content.nodes) nodeLocations
+            List.Extra.zip (Dict.keys content.nodes) nodeCircle
                 |> Dict.fromList
 
         linkPositions : Dict LinkId (Point3d Meters WorldCoordinates)
         linkPositions =
-            -- We use a central point for each link, to allow parallel links
-            -- and possibility of curved links later. The reified link id acts
-            -- in the dictionary like a virtual node, so the force layout
-            -- works seamlessly.
-            content.links
-                |> Dict.map
-                    (\id link ->
-                        case
-                            ( Dict.get link.fromNode nodePositions
-                            , Dict.get link.toNode nodePositions
-                            )
-                        of
-                            ( Just from, Just to ) ->
-                                Point3d.midpoint from to
-
-                            _ ->
-                                Point3d.origin
-                    )
+            List.Extra.zip (Dict.keys content.links) linkCircle
+                |> Dict.fromList
 
         linksAndNodes =
             -- both string ids really
@@ -582,18 +576,18 @@ applyForces nodes links model =
                             netForce =
                                 Dict.foldl
                                     (\otherNode otherPosition total ->
-                                        let
-                                            force =
-                                                Length.meters 60
-                                                    |> Quantity.minus (Point3d.distanceFrom position otherPosition)
-                                                    |> Quantity.clamp Quantity.zero (Length.meters 60)
-                                                    |> Quantity.negate
-
-                                            forceVector =
-                                                Vector3d.from position otherPosition
-                                                    |> Vector3d.scaleTo force
-                                        in
                                         if thisNode /= otherNode then
+                                            let
+                                                force =
+                                                    Length.meters 60
+                                                        |> Quantity.minus (Point3d.distanceFrom position otherPosition)
+                                                        |> Quantity.clamp Quantity.zero (Length.meters 60)
+                                                        |> Quantity.negate
+
+                                                forceVector =
+                                                    Vector3d.from position otherPosition
+                                                        |> Vector3d.scaleTo force
+                                            in
                                             total |> Vector3d.plus forceVector
 
                                         else
@@ -610,34 +604,62 @@ applyForces nodes links model =
 
         withAttraction : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
         withAttraction =
-            -- links
-            --     |> Dict.foldl
-            --         (\linkId reifiedLink forcesDict ->
-            --             let
-            --                 ( s, o ) =
-            --                     ( reifiedLink.subject, reifiedLink.object )
-            --             in
-            --             case ( Dict.get s forcesDict, Dict.get o forcesDict ) of
-            --                 ( Just ( sPos, sForce ), Just ( oPos, oForce ) ) ->
-            --                     let
-            --                         attraction =
-            --                             Point3d.distanceFrom sPos oPos
-            --                                 |> Quantity.minus (Length.meters 30)
-            --                                 |> Quantity.max Quantity.zero
-            --                         forceOnS =
-            --                             Vector3d.from sPos oPos
-            --                                 |> Vector3d.scaleTo attraction
-            --                         forceOnO =
-            --                             Vector3d.from oPos sPos
-            --                                 |> Vector3d.scaleTo attraction
-            --                     in
-            --                     forcesDict
-            --                         |> Dict.insert s ( sPos, Vector3d.plus sForce forceOnS )
-            --                         |> Dict.insert o ( oPos, Vector3d.plus oForce forceOnO )
-            --                 _ ->
-            --                     forcesDict
-            --         )
-            withRepulsion
+            -- Each endpoint moves towards the waypoint, the waypoint moves towards the midpoint.
+            links
+                |> Dict.foldl
+                    (\linkId reifiedLink forcesDict ->
+                        let
+                            ( s, waypoint, o ) =
+                                ( reifiedLink.fromNode
+                                , reifiedLink.linkId
+                                , reifiedLink.toNode
+                                )
+                        in
+                        case
+                            ( Dict.get s forcesDict
+                            , Dict.get waypoint forcesDict
+                            , Dict.get o forcesDict
+                            )
+                        of
+                            ( Just ( sPos, sForce ), Just ( wPos, wForce ), Just ( oPos, oForce ) ) ->
+                                let
+                                    attractionSW =
+                                        -- subject to waypoint
+                                        Point3d.distanceFrom sPos wPos
+                                            |> Quantity.minus (Length.meters 30)
+                                            |> Quantity.max Quantity.zero
+
+                                    attractionOW =
+                                        -- object to waypoint
+                                        Point3d.distanceFrom sPos wPos
+                                            |> Quantity.minus (Length.meters 30)
+                                            |> Quantity.max Quantity.zero
+
+                                    waypointDistance =
+                                        Point3d.distanceFrom wPos
+                                            (Point3d.midpoint sPos oPos)
+
+                                    forceOnS =
+                                        Vector3d.from sPos wPos
+                                            |> Vector3d.scaleTo attractionSW
+
+                                    forceOnO =
+                                        Vector3d.from oPos wPos
+                                            |> Vector3d.scaleTo attractionOW
+
+                                    forceOnWaypoint =
+                                        Vector3d.from wPos (Point3d.midpoint sPos oPos)
+                                            |> Vector3d.scaleTo waypointDistance
+                                in
+                                forcesDict
+                                    |> Dict.insert s ( sPos, Vector3d.plus sForce forceOnS )
+                                    |> Dict.insert o ( oPos, Vector3d.plus oForce forceOnO )
+                                    |> Dict.insert waypoint ( wPos, Vector3d.plus wForce forceOnWaypoint )
+
+                            _ ->
+                                forcesDict
+                    )
+                    withRepulsion
 
         withFields : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
         withFields =
