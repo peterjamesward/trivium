@@ -27,7 +27,8 @@ withClasses classes =
         attribute : String -> Set String -> String
         attribute relation objects =
             String.concat
-                [ "; "
+                [ """; 
+    """
                 , relation
                 , " "
                 , objects |> Set.toList |> String.join """, 
@@ -99,10 +100,14 @@ withNodes nodes =
                         Nothing
 
                     somePhrases ->
-                        Just <| node.id ++ somePhrases ++ " ."
-            )
-        |> String.join """
+                        Just <|
+                            """
 """
+                                ++ node.id
+                                ++ somePhrases
+                                ++ " ."
+            )
+        |> String.join """"""
 
 
 withLinks : Dict LinkId Link -> String
@@ -119,7 +124,9 @@ withLinks links =
         phrases : Link -> String
         phrases link =
             (([ Just
-                    (link.fromNode
+                    ("""
+"""
+                        ++ link.fromNode
                         ++ " -> "
                         ++ link.toNode
                         ++ " : "
@@ -137,8 +144,7 @@ withLinks links =
     (links
         |> Dict.values
         |> List.map phrases
-        |> String.join """.
-"""
+        |> String.join """."""
     )
         ++ (if Dict.isEmpty links then
                 ""
