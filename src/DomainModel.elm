@@ -2,7 +2,12 @@ module DomainModel exposing (..)
 
 import Color exposing (..)
 import Dict exposing (..)
+import Direction3d exposing (..)
 import Set exposing (..)
+
+
+type WorldCoordinates
+    = WorldCoordinates
 
 
 type alias Triple =
@@ -124,3 +129,38 @@ type alias Diagram =
     , bindings : Dict ClassId StyleId
     , styles : Dict StyleId Style
     }
+
+
+preferredLinkDirection : Module -> Link -> Maybe (Direction3d WorldCoordinates)
+preferredLinkDirection content link =
+    case link.class of
+        Just class ->
+            case Dict.get class content.classes of
+                Just theClass ->
+                    case Dict.get "direction" theClass.attributes of
+                        Just directions ->
+                            let
+                                direction =
+                                    directions
+                                        |> Set.toList
+                                        |> List.head
+                                        |> Maybe.withDefault "none"
+                            in
+                            Dict.get (String.toLower direction) <|
+                                Dict.fromList
+                                    [ ( "north", Direction3d.positiveY )
+                                    , ( "south", Direction3d.negativeY )
+                                    , ( "east", Direction3d.positiveX )
+                                    , ( "west", Direction3d.negativeX )
+                                    , ( "up", Direction3d.positiveZ )
+                                    , ( "down", Direction3d.negativeZ )
+                                    ]
+
+                        Nothing ->
+                            Nothing
+
+                Nothing ->
+                    Nothing
+
+        Nothing ->
+            Nothing

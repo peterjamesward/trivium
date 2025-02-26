@@ -44,10 +44,6 @@ import Viewpoint3d
 --TODO: Combine with My3dScene.
 
 
-type WorldCoordinates
-    = WorldCoordinates
-
-
 type DragAction
     = DragNone
     | DragRotate ( Float, Float )
@@ -232,7 +228,7 @@ update msg aModule model =
         AnimationTick now ->
             ( { model | lastTick = now }
                 |> (if Time.posixToMillis now < Time.posixToMillis model.timeLayoutBegan + 30000 then
-                        applyForces aModule.nodes aModule.links
+                        applyForces aModule
 
                     else
                         identity
@@ -546,15 +542,20 @@ subscriptions msgWrapper model =
 
 
 applyForces :
-    Dict NodeId Node
-    -> Dict LinkId Link
+    Module
     -> Model
     -> Model
-applyForces nodes links model =
+applyForces theModule model =
     -- Finally, this is what we are here for.
     -- I know this is quadratic. I also know that can optimise with a strict falloff
     -- using (say) octree, or using a statistical approximation.
     let
+        links =
+            theModule.links
+
+        nodes =
+            theModule.nodes
+
         withGravitationalConstant : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
         withGravitationalConstant =
             -- Avoid clusters spinning off.
@@ -663,58 +664,62 @@ applyForces nodes links model =
 
         withFields : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
         withFields =
-            withAttraction
+            {-
+               Look for links with "direction".
+               These should be reified links, so easy to spot.
+                 _3029807074 FROM peter.
+                 _3029807074 LABEL tallerThan.
+                 _3029807074 TO sharon.
+                 _3029807074 TYPE personal.
+                 personal direction UP.
+            -}
+            links
+                |> Dict.foldl addRotationalForcesIfLinkHasDirection withAttraction
 
-        {-
-           Look for links with "direction".
-           These should be reified links, so easy to spot.
-             _3029807074 FROM peter.
-             _3029807074 LABEL tallerThan.
-             _3029807074 TO sharon.
-             _3029807074 TYPE personal.
-             personal direction UP.
-        -}
-        -- links
-        -- |> Dict.foldl addRotationalForcesIfLinkHasDirection withAttraction
-        -- addRotationalForcesIfLinkHasDirection :
-        --     LinkId
-        --     -> Link
-        --     -> Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
-        --     -> Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
-        -- addRotationalForcesIfLinkHasDirection linkId reified collector =
-        --     -- Should cater for reified links but also simple links where the label is the type.
-        --     -- (which should be covered by the nodesTypes.)
-        --     case
-        --         ( Dict.get reified.fromNode collector
-        --         , Dict.get reified.toNode collector
-        --         )
-        --     of
-        --         ( Just ( sPos, sForce ), Just ( oPos, oForce ) ) ->
-        --             case Dict.get (String.toUpper reified.direction) directionVectors of
-        --                 Just desiredDirection ->
-        --                     -- Note that these forces apply to the "actual" subject and object.
-        --                     let
-        --                         currentVector =
-        --                             Vector3d.from sPos oPos
-        --                         desiredVector =
-        --                             Vector3d.withLength
-        --                                 (Vector3d.length currentVector)
-        --                                 desiredDirection
-        --                         correctiveForceAtStart =
-        --                             desiredVector
-        --                                 |> Vector3d.minus currentVector
-        --                                 |> Vector3d.multiplyBy model.fieldStrength
-        --                         correctiveForceAEnd =
-        --                             Vector3d.reverse correctiveForceAtStart
-        --                                 |> Vector3d.multiplyBy model.fieldStrength
-        --                     in
-        --                     collector
-        --                         |> Dict.insert reified.subject ( sPos, Vector3d.plus sForce correctiveForceAtStart )
-        --                         |> Dict.insert reified.object ( oPos, Vector3d.plus oForce correctiveForceAEnd )
-        --                 _ ->
-        --                     collector
-        --         _ ->
-        --             collector
+        addRotationalForcesIfLinkHasDirection :
+            LinkId
+            -> Link
+            -> Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
+            -> Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
+        addRotationalForcesIfLinkHasDirection linkId reified collector =
+            -- If we can infer a preferred direction based on link type, try to align the endpoints.
+            case
+                ( Dict.get reified.fromNode collector
+                , Dict.get reified.toNode collector
+                )
+            of
+                ( Just ( sPos, sForce ), Just ( oPos, oForce ) ) ->
+                    case preferredLinkDirection theModule reified of
+                        Just desiredDirection ->
+                            -- Note that these forces apply to the "actual" subject and object.
+                            let
+                                currentVector =
+                                    Vector3d.from sPos oPos
+
+                                desiredVector =
+                                    Vector3d.withLength
+                                        (Vector3d.length currentVector)
+                                        desiredDirection
+
+                                correctiveForceAtStart =
+                                    desiredVector
+                                        |> Vector3d.minus currentVector
+                                        |> Vector3d.multiplyBy model.fieldStrength
+
+                                correctiveForceAEnd =
+                                    Vector3d.reverse correctiveForceAtStart
+                                        |> Vector3d.multiplyBy model.fieldStrength
+                            in
+                            collector
+                                |> Dict.insert reified.fromNode ( sPos, Vector3d.plus sForce correctiveForceAtStart )
+                                |> Dict.insert reified.toNode ( oPos, Vector3d.plus oForce correctiveForceAEnd )
+
+                        _ ->
+                            collector
+
+                _ ->
+                    collector
+
         newPositions : Dict String (Point3d Meters WorldCoordinates)
         newPositions =
             withFields
