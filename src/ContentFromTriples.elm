@@ -72,7 +72,7 @@ moduleFromTriples triples =
                 |> List.head
 
         moduleId =
-            fromIndex1 "Module" "is" indexes.objectRelationIndex
+            fromIndex1 "Module" "label" indexes.subjectRelationIndex
                 |> Maybe.withDefault "unnamed"
 
         moduleLabel =

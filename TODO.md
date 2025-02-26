@@ -1,12 +1,11 @@
 
 # WIP
 
-- Allow "x y." as synonym for "y is x.". Permits "Module y." amongst other things.
-- Make sure that failed parse cannot overwrite saved Module!
-- Report lex and parse errors with line and column.
-- Render in 3D. (Need to recreate the forces for links.)
+- Make sure that failed parse disables Save button.
+- Render in 3D. (Need to recreate the field forces for links.)
 - SVG overlay
 
+- Report lex and parse errors with line and column.
 - Use time as seed for reified node id.
 - Allow selection of multiple Modules.
 - Allow selection of one Diagram.

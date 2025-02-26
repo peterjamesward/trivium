@@ -16,25 +16,9 @@ moduleToText m =
 
 moduleHeader m =
     -- Canonical form.
-    String.Interpolate.interpolate
-        """{0} is Module {1}{2}.
+    "Module : " ++ m.id ++ """.
 
 """
-        [ safely m.id
-        , if String.length m.label > 0 then
-            """;
-    label """ ++ m.label
-
-          else
-            """"""
-        , case m.sourceFile of
-            Just file ->
-                """;
-    source """ ++ file
-
-            Nothing ->
-                """"""
-        ]
 
 
 withClasses : Dict ClassId Class -> String
@@ -54,11 +38,10 @@ withClasses classes =
                             Nothing ->
                                 ""
                        )
-                    ++ """."""
-            )
-        |> String.join """
-    
+                    ++ """ .
 """
+            )
+        |> String.join """"""
 
 
 withNodes : Dict NodeId Node -> String
@@ -86,7 +69,8 @@ withNodes nodes =
                 |> String.join """;
 """
     in
-    (nodes
+    nodes
+        |> Dict.filter (\id _ -> id /= "Module")
         |> Dict.values
         |> List.filterMap
             (\node ->
@@ -96,13 +80,9 @@ withNodes nodes =
                         Nothing
 
                     somePhrases ->
-                        Just <| node.id ++ somePhrases
+                        Just <| node.id ++ somePhrases ++ " ."
             )
-        |> String.join """.
-    
-"""
-    )
-        ++ """.
+        |> String.join """
 """
 
 
@@ -139,7 +119,6 @@ withLinks links =
         |> Dict.values
         |> List.map phrases
         |> String.join """.
-    
 """
     )
         ++ (if Dict.isEmpty links then

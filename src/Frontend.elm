@@ -179,7 +179,8 @@ updateFromBackend msg model =
         ModuleContent id triples ->
             let
                 newModule =
-                    moduleFromTriples triples
+                    Debug.log "MODULE" <|
+                        moduleFromTriples triples
             in
             ( { model
                 | aModule = Just newModule
