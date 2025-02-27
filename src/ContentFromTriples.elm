@@ -217,9 +217,6 @@ moduleFromTriples triples =
                         -- Remove reserved words.
                         not <| Set.member id (Set.fromList [ "Type", "Module" ])
                     )
-
-        _ =
-            Debug.log "NODES" <| Dict.keys nodes
     in
     { id = moduleId
     , label = moduleLabel

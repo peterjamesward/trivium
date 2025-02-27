@@ -100,6 +100,17 @@ columnStyles =
     ]
 
 
+neatRowStyles =
+    [ width fill
+    , padding 5
+    , spacing 5
+    , Font.family
+        [ Font.typeface "Open Sans"
+        , Font.monospace
+        ]
+    ]
+
+
 buttonStyles =
     [ padding 5
     , Border.rounded 5

@@ -222,24 +222,23 @@ view model =
                         , label = Input.labelHidden "content"
                         , spellcheck = False
                         }
-                    , Input.button CommonUiElements.buttonStyles
-                        { label = text "Validate"
-                        , onPress = Just UserClickedParse
-                        }
-                    , case model.parseStatus of
-                        Ok _ ->
-                            Input.button CommonUiElements.buttonStyles
-                                { label = text "Save"
-                                , onPress = Just UserClickedSave
-                                }
+                    , row neatRowStyles
+                        [ Input.button CommonUiElements.buttonStyles
+                            { label = text "Validate"
+                            , onPress = Just UserClickedParse
+                            }
+                        , case model.parseStatus of
+                            Ok _ ->
+                                Input.button CommonUiElements.buttonStyles
+                                    { label = text "Save"
+                                    , onPress = Just UserClickedSave
+                                    }
 
-                        Err error ->
-                            CommonUiElements.disabledButton error
+                            Err error ->
+                                CommonUiElements.disabledButton error
+                        ]
                     ]
-                , column columnStyles
-                    [ -- ViewCatalogue.showCatalogue model.aModule
-                      Force3DLayout.view Force3DMsg model.visual3d
-                    ]
+                , Force3DLayout.view Force3DMsg model.visual3d
                 , column columnStyles
                     [ model.moduleList
                         |> List.map
