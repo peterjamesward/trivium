@@ -10,6 +10,10 @@ type WorldCoordinates
     = WorldCoordinates
 
 
+type SVGCoordinates
+    = SVGCoordinates
+
+
 type alias Triple =
     ( String, String, String )
 

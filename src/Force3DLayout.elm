@@ -2,6 +2,7 @@ module Force3DLayout exposing (..)
 
 import Angle exposing (..)
 import Arc3d exposing (..)
+import Axis2d exposing (..)
 import Axis3d exposing (..)
 import Block3d
 import BoundingBox3d exposing (..)
@@ -11,10 +12,13 @@ import Color
 import Cone3d
 import Cylinder3d
 import Dict exposing (Dict)
+import Direction2d exposing (..)
 import Direction3d exposing (..)
 import DomainModel exposing (..)
 import Element exposing (..)
+import Frame2d
 import Frame3d
+import Geometry.Svg as Svg
 import Html.Events as HE
 import Html.Events.Extra.Mouse as Mouse exposing (Button(..))
 import Html.Events.Extra.Wheel as Wheel
@@ -34,20 +38,34 @@ import Scene3d.Material as Material
 import Set exposing (..)
 import SketchPlane3d exposing (..)
 import Sphere3d
+import Svg
+import Svg.Attributes
 import Time
 import Vector3d exposing (..)
 import Viewpoint3d
 
 
+type alias Position3d =
+    Point3d Meters WorldCoordinates
 
---TODO: Effective rewrite with cherry picking to avoid inherited debt.
---TODO: Combine with My3dScene.
+
+type alias PositionSVG =
+    Point2d Pixels SVGCoordinates
 
 
 type DragAction
     = DragNone
     | DragRotate ( Float, Float )
     | DragPan ( Float, Float )
+
+
+type alias Position =
+    { -- Use one structure for all our internal purposes.
+      position3d : Position3d
+    , positionSvg : PositionSVG
+    , label : String
+    , force : Vector3d Meters WorldCoordinates
+    }
 
 
 type alias Model =
@@ -57,7 +75,7 @@ type alias Model =
     , fieldStrength : Float -- relative field alignment force for links
     , gravitationalConstant : Float -- avoid infinite expansion
     , timeDelta : Float -- how much to apply force each tick.
-    , positions : Dict String (Point3d Meters WorldCoordinates)
+    , positions : Dict String Position
     , timeLayoutBegan : Time.Posix
     , lastTick : Time.Posix
 
@@ -68,8 +86,7 @@ type alias Model =
     , zoomLevel : Float
     , focalPoint : Point3d Meters WorldCoordinates
     , dragging : DragAction
-    , screenRectangle : Rectangle2d Pixels WorldCoordinates
-    , labelsAndLocations : List ClickIndexEntry -- Mainly for click detection.
+    , screenRectangle : Rectangle2d Pixels SVGCoordinates
     , waitingForClickDelay : Bool
     , biggestBox : BoundingBox3d Meters WorldCoordinates
     }
@@ -114,7 +131,6 @@ init ( width, height ) =
         Rectangle2d.from
             (Point2d.xy (Pixels.pixels <| Basics.toFloat width) Quantity.zero)
             (Point2d.xy Quantity.zero (Pixels.pixels <| Basics.toFloat height))
-    , labelsAndLocations = []
     , waitingForClickDelay = False
     , biggestBox = BoundingBox3d.singleton Point3d.origin
     }
@@ -128,6 +144,13 @@ computeInitialPositions content model =
     -- Must make sure that parallel links are separated at the start, so the repulsion works.
     -- Do this by treating the virtual nodes (link midpoints) the same as real nodes.
     let
+        pointWrap pt label =
+            { position3d = pt
+            , positionSvg = Point2d.origin
+            , label = label
+            , force = Vector3d.zero
+            }
+
         nodeCircle : List (Point3d Meters WorldCoordinates)
         nodeCircle =
             -- Start by distributing nodes arbitrarily (not randomly) around a circle.
@@ -138,20 +161,31 @@ computeInitialPositions content model =
 
         linkCircle : List (Point3d Meters WorldCoordinates)
         linkCircle =
-            -- Start by distributing nodes arbitrarily (not randomly) around a circle.
+            -- Start by distributing midpoints arbitrarily (not randomly) around a circle.
             Circle3d.withRadius (Length.meters 50) Direction3d.z Point3d.origin
                 |> Circle3d.toArc
                 |> Arc3d.segments (Dict.size content.links)
                 |> Polyline3d.vertices
 
-        nodePositions : Dict NodeId (Point3d Meters WorldCoordinates)
+        nodePositions : Dict NodeId Position
         nodePositions =
-            List.Extra.zip (Dict.keys content.nodes) nodeCircle
+            content.nodes
+                |> Dict.map (\id node -> ( id, Maybe.withDefault "??" node.label ))
+                |> Dict.values
+                |> List.Extra.zip nodeCircle
+                |> List.map
+                    (\( pos, ( id, label ) ) -> ( id, pointWrap pos label ))
                 |> Dict.fromList
 
-        linkPositions : Dict LinkId (Point3d Meters WorldCoordinates)
+        linkPositions : Dict LinkId Position
         linkPositions =
-            List.Extra.zip (Dict.keys content.links) linkCircle
+            content.links
+                |> Dict.map
+                    (\id link -> ( id, link.label ))
+                |> Dict.values
+                |> List.Extra.zip linkCircle
+                |> List.map
+                    (\( pos, ( id, label ) ) -> ( id, pointWrap pos label ))
                 |> Dict.fromList
 
         linksAndNodes =
@@ -159,7 +193,9 @@ computeInitialPositions content model =
             Dict.union nodePositions linkPositions
 
         modelWithInitialPositions =
-            { model | positions = linksAndNodes }
+            { model
+                | positions = mapToSvg model linksAndNodes
+            }
     in
     makeMeshFromCurrentPositions content.nodes content.links modelWithInitialPositions
 
@@ -181,7 +217,7 @@ makeMeshFromCurrentPositions nodes links model =
                     (\nodeId ->
                         case Dict.get nodeId model.positions of
                             Just position ->
-                                Sphere3d.withRadius (Length.meters 8) position
+                                Sphere3d.withRadius (Length.meters 8) position.position3d
                                     |> Scene3d.sphere (Material.color Color.red)
                                     |> Just
 
@@ -202,8 +238,8 @@ makeMeshFromCurrentPositions nodes links model =
                             )
                         of
                             ( Just from, Just mid, Just to ) ->
-                                [ Cylinder3d.from from mid (Length.meters 2)
-                                , Cylinder3d.from mid to (Length.meters 2)
+                                [ Cylinder3d.from from.position3d mid.position3d (Length.meters 2)
+                                , Cylinder3d.from mid.position3d to.position3d (Length.meters 2)
                                 ]
                                     |> List.filterMap identity
                                     |> List.map (Scene3d.cylinder (Material.color Color.blue))
@@ -417,56 +453,6 @@ update msg aModule model =
             ( model, Nothing )
 
 
-type alias ClickIndexEntry =
-    -- Handy form for rendering and click detection.
-    { nodeId : NodeId
-    , label : String
-    , isLink : Bool
-    , location : Point3d Meters WorldCoordinates
-    , linkWaypoints : List (Point3d Meters WorldCoordinates)
-    , screenLocation : Maybe (Point2d Pixels WorldCoordinates) -- set by My3dscene only for visible points.
-    , screenLocationForSVG : Maybe (Point2d Pixels WorldCoordinates) -- probably redundant.
-    , colour : String
-    , shape : String
-    }
-
-
-makeShape :
-    ClickIndexEntry
-    -> Entity WorldCoordinates
-makeShape entry =
-    let
-        material =
-            Color.grey
-                |> Material.color
-    in
-    case entry.shape of
-        "sphere" ->
-            Sphere3d.withRadius (Length.meters 8) entry.location
-                |> Scene3d.sphere material
-
-        "cube" ->
-            Block3d.centeredOn (Frame3d.atPoint entry.location)
-                ( Length.meters 12, Length.meters 12, Length.meters 12 )
-                |> Scene3d.block material
-
-        "cone" ->
-            Cone3d.startingAt entry.location
-                Direction3d.positiveZ
-                { radius = Length.meters 8, length = Length.meters 12 }
-                |> Scene3d.cone material
-
-        "cylinder" ->
-            Cylinder3d.startingAt entry.location
-                Direction3d.positiveZ
-                { radius = Length.meters 8, length = Length.meters 8 }
-                |> Scene3d.cylinder material
-
-        _ ->
-            Sphere3d.withRadius (Length.meters 8) entry.location
-                |> Scene3d.sphere material
-
-
 onContextMenu : a -> Element.Attribute a
 onContextMenu msg =
     HE.custom "contextmenu"
@@ -515,7 +501,7 @@ view wrapper model =
         , htmlAttribute <| Mouse.onClick (UserClick >> wrapper)
 
         --, htmlAttribute <| Mouse.onDoubleClick (ImageDoubleClick >> msgWrapper)
-        -- , inFront <| textOverlay model.screenRectangle camera model
+        , inFront <| textOverlay model
         , onContextMenu (wrapper NoOp)
         ]
     <|
@@ -556,23 +542,24 @@ applyForces theModule model =
         nodes =
             theModule.nodes
 
-        withGravitationalConstant : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
+        withGravitationalConstant : Dict String Position
         withGravitationalConstant =
             -- Avoid clusters spinning off.
             model.positions
                 |> Dict.map
                     (\thisNode position ->
-                        ( position
-                        , Vector3d.from position Point3d.origin
-                            |> Vector3d.multiplyBy model.gravitationalConstant
-                        )
+                        { position
+                            | force =
+                                Vector3d.from position.position3d Point3d.origin
+                                    |> Vector3d.multiplyBy model.gravitationalConstant
+                        }
                     )
 
-        withRepulsion : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
+        withRepulsion : Dict String Position
         withRepulsion =
             withGravitationalConstant
                 |> Dict.map
-                    (\thisNode ( position, before ) ->
+                    (\thisNode position ->
                         let
                             netForce =
                                 Dict.foldl
@@ -581,12 +568,16 @@ applyForces theModule model =
                                             let
                                                 force =
                                                     Length.meters 60
-                                                        |> Quantity.minus (Point3d.distanceFrom position otherPosition)
+                                                        |> Quantity.minus
+                                                            (Point3d.distanceFrom
+                                                                position.position3d
+                                                                otherPosition.position3d
+                                                            )
                                                         |> Quantity.clamp Quantity.zero (Length.meters 60)
                                                         |> Quantity.negate
 
                                                 forceVector =
-                                                    Vector3d.from position otherPosition
+                                                    Vector3d.from position.position3d otherPosition.position3d
                                                         |> Vector3d.scaleTo force
                                             in
                                             total |> Vector3d.plus forceVector
@@ -597,72 +588,75 @@ applyForces theModule model =
                                     Vector3d.zero
                                     model.positions
                         in
-                        ( position
-                        , Vector3d.plus before
-                            (netForce |> Vector3d.multiplyBy model.repulsion)
-                        )
+                        { position
+                            | force =
+                                Vector3d.plus position.force
+                                    (netForce |> Vector3d.multiplyBy model.repulsion)
+                        }
                     )
 
-        withAttraction : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
+        withAttraction : Dict String Position
         withAttraction =
             -- Each endpoint moves towards the waypoint, the waypoint moves towards the midpoint.
             links
                 |> Dict.foldl
                     (\linkId reifiedLink forcesDict ->
                         let
-                            ( s, waypoint, o ) =
+                            ( s, way, o ) =
                                 ( reifiedLink.fromNode
                                 , reifiedLink.linkId
                                 , reifiedLink.toNode
                                 )
                         in
                         case
-                            ( Dict.get s forcesDict
-                            , Dict.get waypoint forcesDict
-                            , Dict.get o forcesDict
+                            ( Dict.get s model.positions
+                            , Dict.get way model.positions
+                            , Dict.get o model.positions
                             )
                         of
-                            ( Just ( sPos, sForce ), Just ( wPos, wForce ), Just ( oPos, oForce ) ) ->
+                            ( Just subject, Just waypoint, Just object ) ->
                                 let
                                     attractionSW =
                                         -- subject to waypoint
-                                        Point3d.distanceFrom sPos wPos
+                                        Point3d.distanceFrom subject.position3d waypoint.position3d
                                             |> Quantity.minus (Length.meters 30)
                                             |> Quantity.max Quantity.zero
 
                                     attractionOW =
                                         -- object to waypoint
-                                        Point3d.distanceFrom sPos wPos
+                                        Point3d.distanceFrom object.position3d waypoint.position3d
                                             |> Quantity.minus (Length.meters 30)
                                             |> Quantity.max Quantity.zero
 
+                                    midpoint =
+                                        Point3d.midpoint subject.position3d object.position3d
+
                                     waypointDistance =
-                                        Point3d.distanceFrom wPos
-                                            (Point3d.midpoint sPos oPos)
+                                        Point3d.distanceFrom waypoint.position3d midpoint
 
                                     forceOnS =
-                                        Vector3d.from sPos wPos
+                                        Vector3d.from subject.position3d waypoint.position3d
                                             |> Vector3d.scaleTo attractionSW
 
                                     forceOnO =
-                                        Vector3d.from oPos wPos
+                                        Vector3d.from object.position3d waypoint.position3d
                                             |> Vector3d.scaleTo attractionOW
 
                                     forceOnWaypoint =
-                                        Vector3d.from wPos (Point3d.midpoint sPos oPos)
+                                        Vector3d.from waypoint.position3d midpoint
                                             |> Vector3d.scaleTo waypointDistance
                                 in
                                 forcesDict
-                                    |> Dict.insert s ( sPos, Vector3d.plus sForce forceOnS )
-                                    |> Dict.insert o ( oPos, Vector3d.plus oForce forceOnO )
-                                    |> Dict.insert waypoint ( wPos, Vector3d.plus wForce forceOnWaypoint )
+                                    |> Dict.insert s { subject | force = Vector3d.plus subject.force forceOnS }
+                                    |> Dict.insert o { object | force = Vector3d.plus object.force forceOnO }
+                                    |> Dict.insert way { waypoint | force = Vector3d.plus waypoint.force forceOnWaypoint }
 
                             _ ->
                                 forcesDict
                     )
                     withRepulsion
 
-        withFields : Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
+        withFields : Dict String Position
         withFields =
             {-
                Look for links with "direction".
@@ -679,8 +673,8 @@ applyForces theModule model =
         addRotationalForcesIfLinkHasDirection :
             LinkId
             -> Link
-            -> Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
-            -> Dict String ( Point3d Meters WorldCoordinates, Vector3d Meters WorldCoordinates )
+            -> Dict String Position
+            -> Dict String Position
         addRotationalForcesIfLinkHasDirection linkId reified collector =
             -- If we can infer a preferred direction based on link type, try to align the endpoints.
             case
@@ -688,13 +682,13 @@ applyForces theModule model =
                 , Dict.get reified.toNode collector
                 )
             of
-                ( Just ( sPos, sForce ), Just ( oPos, oForce ) ) ->
+                ( Just subject, Just object ) ->
                     case preferredLinkDirection theModule reified of
                         Just desiredDirection ->
                             -- Note that these forces apply to the "actual" subject and object.
                             let
                                 currentVector =
-                                    Vector3d.from sPos oPos
+                                    Vector3d.from subject.position3d object.position3d
 
                                 desiredVector =
                                     Vector3d.withLength
@@ -711,8 +705,12 @@ applyForces theModule model =
                                         |> Vector3d.multiplyBy model.fieldStrength
                             in
                             collector
-                                |> Dict.insert reified.fromNode ( sPos, Vector3d.plus sForce correctiveForceAtStart )
-                                |> Dict.insert reified.toNode ( oPos, Vector3d.plus oForce correctiveForceAEnd )
+                                |> Dict.insert reified.fromNode
+                                    { subject
+                                        | force = Vector3d.plus subject.force correctiveForceAtStart
+                                    }
+                                |> Dict.insert reified.toNode
+                                    { object | force = Vector3d.plus object.force correctiveForceAEnd }
 
                         _ ->
                             collector
@@ -720,16 +718,163 @@ applyForces theModule model =
                 _ ->
                     collector
 
-        newPositions : Dict String (Point3d Meters WorldCoordinates)
+        newPositions : Dict String Position
         newPositions =
             withFields
                 |> Dict.map
-                    (\thisNode ( position, force ) ->
-                        position
-                            |> Point3d.translateBy (Vector3d.scaleBy model.timeDelta force)
+                    (\thisNode position ->
+                        { position
+                            | position3d =
+                                position.position3d
+                                    |> Point3d.translateBy (Vector3d.scaleBy model.timeDelta position.force)
+                            , force = Vector3d.zero
+                        }
                     )
 
         modelWithNewPositions =
             { model | positions = newPositions }
     in
     makeMeshFromCurrentPositions nodes links modelWithNewPositions
+
+
+mapToSvg :
+    Model
+    -> Dict NodeId Position
+    -> Dict NodeId Position
+mapToSvg model coords3d =
+    -- Takes 3d points and works out the SVG for each.
+    let
+        ( wPixels, hPixels ) =
+            Rectangle2d.dimensions model.screenRectangle
+
+        ( svgWidth, svgHeight ) =
+            ( String.fromInt <| round <| Pixels.inPixels wPixels
+            , String.fromInt <| round <| Pixels.inPixels hPixels
+            )
+
+        useThisRectangleForSVG =
+            -- Whatever.
+            Rectangle2d.from
+                Point2d.origin
+                (Point2d.xy wPixels hPixels)
+
+        useThisRectangleForWebGL =
+            -- Whatever.
+            Rectangle2d.from
+                (Point2d.xy Quantity.zero hPixels)
+                (Point2d.xy wPixels Quantity.zero)
+
+        viewpoint =
+            Viewpoint3d.orbitZ
+                { focalPoint = model.focalPoint
+                , azimuth = model.azimuth
+                , elevation = model.elevation
+                , distance = Length.meters <| 1000 * 2 ^ model.zoomLevel
+                }
+
+        camera =
+            Camera3d.perspective
+                { verticalFieldOfView = Angle.degrees 50
+                , viewpoint = viewpoint
+                }
+
+        newEntry : NodeId -> Position -> Position
+        newEntry id has3d =
+            { has3d
+                | positionSvg =
+                    Point3d.Projection.toScreenSpace
+                        camera
+                        useThisRectangleForSVG
+                        has3d.position3d
+            }
+    in
+    Dict.map newEntry coords3d
+
+
+textOverlay :
+    Model
+    -> Element msg
+textOverlay model =
+    let
+        ( wPixels, hPixels ) =
+            Rectangle2d.dimensions model.screenRectangle
+
+        ( svgWidth, svgHeight ) =
+            ( String.fromInt <| round <| Pixels.inPixels wPixels
+            , String.fromInt <| round <| Pixels.inPixels hPixels
+            )
+
+        useThisRectangleForSVG =
+            -- Whatever.
+            Rectangle2d.from
+                Point2d.origin
+                (Point2d.xy wPixels hPixels)
+
+        viewpoint =
+            Viewpoint3d.orbitZ
+                { focalPoint = model.focalPoint
+                , azimuth = model.azimuth
+                , elevation = model.elevation
+                , distance = Length.meters <| 1000 * 2 ^ model.zoomLevel
+                }
+
+        camera =
+            Camera3d.perspective
+                { verticalFieldOfView = Angle.degrees 50
+                , viewpoint = viewpoint
+                }
+
+        nodes2dVisible =
+            --TODO: Finish SVG, reasonably neatly, considering we have two parallel position dicts.
+            model.positions
+                |> Dict.filter
+                    -- hide things behind the camera.
+                    (\id position ->
+                        position.position3d |> Point3d.Projection.depth camera |> Quantity.greaterThanZero
+                    )
+                |> Dict.filter
+                    (\id position ->
+                        Rectangle2d.contains position.positionSvg useThisRectangleForSVG
+                    )
+
+        textAttributes atPoint =
+            [ Svg.Attributes.fill "black"
+            , Svg.Attributes.fontFamily "sans-serif"
+            , Svg.Attributes.fontSize "16px"
+            , Svg.Attributes.stroke "none"
+            , Svg.Attributes.x (String.fromFloat (Pixels.toFloat (Point2d.xCoordinate atPoint) + 6))
+            , Svg.Attributes.y (String.fromFloat (Pixels.toFloat (Point2d.yCoordinate atPoint) + 6))
+            ]
+
+        -- Create an SVG label at each place
+        nodeLabels =
+            model.positions
+                |> Dict.map
+                    (\id position ->
+                        Svg.text_
+                            (textAttributes position.positionSvg)
+                            [ Svg.text position.label ]
+                            -- Hack: flip the text upside down since our later
+                            -- 'Svg.relativeTo topLeftFrame' call will flip it
+                            -- back right side up
+                            |> Svg.mirrorAcross
+                                (Axis2d.through
+                                    position.positionSvg
+                                    Direction2d.x
+                                )
+                    )
+                |> Dict.values
+                |> Svg.g []
+    in
+    let
+        topLeftFrame =
+            Frame2d.atPoint
+                (Point2d.xy Quantity.zero hPixels)
+                |> Frame2d.reverseY
+    in
+    Element.html <|
+        Svg.svg
+            [ Svg.Attributes.width svgWidth
+            , Svg.Attributes.height svgHeight
+            ]
+            [ Svg.relativeTo topLeftFrame nodeLabels ]

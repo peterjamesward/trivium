@@ -1,12 +1,9 @@
 
 # WIP
 
-- Don't parse while typing!
-- Render in 3D. (Need to recreate the field forces for links.)
 - SVG overlay
 
 - Report lex and parse errors with line and column.
-- Use time as seed for reified node id.
 - Allow selection of multiple Modules.
 - Allow selection of one Diagram.
 - Overhaul the UI.
@@ -20,7 +17,6 @@
 - Select and edit a file.
 - Select files to show (in each window).
 - Select styles to apply (per window).
-- Add basic inspector.
 
 - Add Clockwise and Anticlockwise link alignment fields.
 
