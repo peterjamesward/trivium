@@ -170,7 +170,7 @@ computeInitialPositions content model =
         nodePositions : Dict NodeId Position
         nodePositions =
             content.nodes
-                |> Dict.map (\id node -> ( id, Maybe.withDefault "??" node.label ))
+                |> Dict.map (\id node -> ( id, Maybe.withDefault id node.label ))
                 |> Dict.values
                 |> List.Extra.zip nodeCircle
                 |> List.map
@@ -181,11 +181,23 @@ computeInitialPositions content model =
         linkPositions =
             content.links
                 |> Dict.map
-                    (\id link -> ( id, link.label ))
+                    (\id link ->
+                        ( id
+                        , pointWrap
+                            (Point3d.midpoint
+                                (Dict.get link.fromNode nodePositions
+                                    |> Maybe.map .position3d
+                                    |> Maybe.withDefault Point3d.origin
+                                )
+                                (Dict.get link.toNode nodePositions
+                                    |> Maybe.map .position3d
+                                    |> Maybe.withDefault Point3d.origin
+                                )
+                            )
+                            link.label
+                        )
+                    )
                 |> Dict.values
-                |> List.Extra.zip linkCircle
-                |> List.map
-                    (\( pos, ( id, label ) ) -> ( id, pointWrap pos label ))
                 |> Dict.fromList
 
         linksAndNodes =
@@ -355,8 +367,7 @@ update msg aModule model =
                         | azimuth = newAzimuth
                         , elevation = newElevation
                         , dragging = DragRotate event.offsetPos
-
-                        -- , labelsAndLocations = projectOntoScreen model model.labelsAndLocations
+                        , positions = mapToSvg model model.positions
                       }
                     , Nothing
                     )
@@ -411,8 +422,7 @@ update msg aModule model =
                             ( { model
                                 | focalPoint = newFocus
                                 , dragging = DragPan event.offsetPos
-
-                                -- , labelsAndLocations = projectOntoScreen model model.labelsAndLocations
+                                , positions = mapToSvg model model.positions
                               }
                             , Nothing
                             )
@@ -430,8 +440,7 @@ update msg aModule model =
             in
             ( { model
                 | zoomLevel = clamp -10 10 <| model.zoomLevel + increment
-
-                -- , labelsAndLocations = projectOntoScreen model model.labelsAndLocations
+                , positions = mapToSvg model model.positions
               }
             , Nothing
             )
@@ -442,8 +451,7 @@ update msg aModule model =
                     Rectangle2d.from
                         (Point2d.xy (Pixels.pixels <| Basics.toFloat width) Quantity.zero)
                         (Point2d.xy Quantity.zero (Pixels.pixels <| Basics.toFloat height))
-
-                -- , labelsAndLocations = projectOntoScreen model model.labelsAndLocations
+                , positions = mapToSvg model model.positions
               }
             , Nothing
             )
@@ -732,7 +740,7 @@ applyForces theModule model =
                     )
 
         modelWithNewPositions =
-            { model | positions = newPositions }
+            { model | positions = mapToSvg model newPositions }
     in
     makeMeshFromCurrentPositions nodes links modelWithNewPositions
 

@@ -1,14 +1,13 @@
 
 # WIP
 
-- SVG overlay
-
 - Report lex and parse errors with line and column.
 - Allow selection of multiple Modules.
 - Allow selection of one Diagram.
 - Overhaul the UI.
 - Make multiple tabs in main window (input | output).
 - Option to show all triples as "non-semantic" graph.
+- Play/Pause button for animation.
 
 - Add Inspector pane.
 - Save to file.

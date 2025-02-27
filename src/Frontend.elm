@@ -223,7 +223,7 @@ view model =
                         , spellcheck = False
                         }
                     , Input.button CommonUiElements.buttonStyles
-                        { label = text "Parse"
+                        { label = text "Validate"
                         , onPress = Just UserClickedParse
                         }
                     , case model.parseStatus of
