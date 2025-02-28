@@ -8,6 +8,7 @@ import ContentFromTriples exposing (..)
 import Dict exposing (..)
 import DomainModel exposing (..)
 import Element exposing (..)
+import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Force3DLayout
@@ -16,6 +17,7 @@ import Html.Attributes as Attr
 import Lamdera
 import Lexer exposing (..)
 import Parser exposing (..)
+import Set exposing (..)
 import Time exposing (..)
 import Types exposing (..)
 import Url
@@ -45,13 +47,15 @@ init url key =
       , message = ""
       , diagramList = []
       , moduleList = []
-      , modules = Dict.empty
-      , aModule = Nothing
+      , editingModule = Nothing
       , diagrams = Dict.empty
       , contentEditArea = ""
       , tokenizedInput = []
       , parseStatus = Err "nothing to parse"
-      , visual3d = Force3DLayout.init ( 600, 400 )
+      , visual3d = Force3DLayout.init ( 600, 800 )
+      , selectedModules = Set.empty
+      , loadedModules = Dict.empty
+      , standbyModules = Dict.empty
       }
     , Lamdera.sendToBackend RequestModuleList
     )
@@ -67,16 +71,68 @@ subscriptions model =
 
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
+    let
+        newVisual3d loaded =
+            loaded
+                |> Dict.values
+                |> List.foldl Set.union Set.empty
+                |> moduleFromTriples
+                |> (\m -> Force3DLayout.computeInitialPositions m model.visual3d)
+    in
     case msg of
+        UserTogglesModuleSelection moduleId active ->
+            --TODO: always regenerate visuals with currently loaded modules...
+            if active then
+                -- If we have a copy locally, use it straight away.
+                case Dict.get moduleId model.standbyModules of
+                    Just standby ->
+                        let
+                            loadedModules =
+                                Dict.insert moduleId standby model.loadedModules
+                        in
+                        ( { model
+                            | selectedModules = Set.insert moduleId model.selectedModules
+                            , loadedModules = loadedModules
+                            , standbyModules = Dict.remove moduleId model.standbyModules
+                            , visual3d = newVisual3d loadedModules
+                          }
+                        , Cmd.none
+                        )
+
+                    Nothing ->
+                        -- Order it up from the archives.
+                        ( { model | selectedModules = Set.insert moduleId model.selectedModules }
+                        , Lamdera.sendToBackend (RequestModule moduleId)
+                        )
+
+            else
+                let
+                    loadedModules =
+                        Dict.remove moduleId model.loadedModules
+                in
+                ( { model
+                    | selectedModules = Set.remove moduleId model.selectedModules
+                    , loadedModules = loadedModules
+                    , standbyModules =
+                        case Dict.get moduleId model.loadedModules of
+                            Just loaded ->
+                                Dict.insert moduleId loaded model.standbyModules
+
+                            Nothing ->
+                                model.standbyModules
+                    , visual3d = newVisual3d loadedModules
+                  }
+                , Cmd.none
+                )
+
         Tick now ->
             ( { model | time = now }
             , Cmd.none
             )
 
         Force3DMsg forceMsg ->
-            case model.aModule of
+            case model.editingModule of
                 Just activeModule ->
-                    --TODO: Allow for multiple open modules.
                     let
                         ( newVisual, ignoreClick ) =
                             Force3DLayout.update forceMsg activeModule model.visual3d
@@ -89,12 +145,28 @@ update msg model =
                     ( model, Cmd.none )
 
         UserClickedModuleId mId ->
-            ( model
-            , Lamdera.sendToBackend (RequestModule mId)
-            )
+            -- If loaded, module is move into the editing area.
+            case Dict.get mId model.loadedModules of
+                Just triples ->
+                    let
+                        asModule =
+                            ContentFromTriples.moduleFromTriples triples
+                    in
+                    ( { model
+                        | editingModule = Just asModule
+                        , contentEditArea = AsText.moduleToText asModule
+                        , parseStatus = Err "loaded"
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model
+                    , Cmd.none
+                    )
 
         UserClickedSave ->
-            case ( model.aModule, model.parseStatus ) of
+            case ( model.editingModule, model.parseStatus ) of
                 ( Just m, Ok triples ) ->
                     ( model, Lamdera.sendToBackend (SaveModule m.id triples) )
 
@@ -136,7 +208,7 @@ update msg model =
                     Lexer.tokenize model.contentEditArea
 
                 parse =
-                    Parser.parseTokensToTriples (Time.millisToPosix 122) tokens
+                    Parser.parseTokensToTriples tokens
 
                 aModule =
                     case parse of
@@ -149,14 +221,14 @@ update msg model =
             ( { model
                 | tokenizedInput = tokens
                 , parseStatus = parse
-                , aModule = aModule
-                , visual3d =
-                    case aModule of
-                        Just isModule ->
-                            Force3DLayout.computeInitialPositions isModule model.visual3d
+                , editingModule = aModule
 
-                        Nothing ->
-                            model.visual3d
+                -- , visual3d =
+                --     case aModule of
+                --         Just isModule ->
+                --             Force3DLayout.computeInitialPositions isModule model.visual3d
+                --         Nothing ->
+                --             model.visual3d
               }
             , Cmd.none
             )
@@ -185,14 +257,20 @@ updateFromBackend msg model =
 
         ModuleContent id triples ->
             let
+                withAddedModule =
+                    Dict.insert id triples model.loadedModules
+
+                allTriples =
+                    withAddedModule
+                        |> Dict.values
+                        |> List.foldl Set.union Set.empty
+
                 newModule =
-                    -- Debug.log "MODULE" <|
-                    moduleFromTriples triples
+                    moduleFromTriples allTriples
             in
             ( { model
-                | aModule = Just newModule
+                | loadedModules = withAddedModule
                 , visual3d = Force3DLayout.computeInitialPositions newModule model.visual3d
-                , contentEditArea = AsText.moduleToText newModule
               }
             , Cmd.none
             )
@@ -240,16 +318,67 @@ view model =
                     ]
                 , Force3DLayout.view Force3DMsg model.visual3d
                 , column columnStyles
-                    [ model.moduleList
-                        |> List.map
-                            (\moduleId ->
-                                Input.button CommonUiElements.buttonStyles
-                                    { label = text moduleId
-                                    , onPress = Just (UserClickedModuleId moduleId)
-                                    }
-                            )
-                        |> wrappedRow [ spacing 5, padding 5, width fill ]
+                    [ modulesTable model.moduleList model.selectedModules
                     ]
                 ]
         ]
     }
+
+
+modulesTable :
+    List ModuleId
+    -> Set ModuleId
+    -> Element FrontendMsg
+modulesTable modules selected =
+    let
+        headerAttrs =
+            [ Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 } ]
+
+        selectable item =
+            if Set.member item selected then
+                simpleButton (UserClickedModuleId item) "edit"
+
+            else
+                disabledButton "not loaded"
+
+        includable item =
+            Input.checkbox [ centerY ]
+                { onChange = UserTogglesModuleSelection item
+                , icon = Input.defaultCheckbox
+                , checked = Set.member item selected
+                , label = Input.labelHidden "include"
+                }
+    in
+    column
+        columnStyles
+        [ row [ width fill ]
+            [ el ((width <| fillPortion 1) :: headerAttrs) <| text "Show"
+            , el ((width <| fillPortion 4) :: headerAttrs) <| text "Module"
+            , el ((width <| fillPortion 1) :: headerAttrs) <| text "Edit"
+            ]
+
+        -- workaround for a bug: it's necessary to wrap `table` in an `el`
+        -- to get table height attribute to apply
+        , el [ width fill ] <|
+            table
+                [ width fill
+                , scrollbarY
+                , spacing 1
+                ]
+                { data = modules
+                , columns =
+                    [ { header = none
+                      , width = fillPortion 1
+                      , view = includable
+                      }
+                    , { header = none
+                      , width = fillPortion 4
+                      , view = text
+                      }
+                    , { header = none
+                      , width = fillPortion 1
+                      , view = selectable
+                      }
+                    ]
+                }
+        ]

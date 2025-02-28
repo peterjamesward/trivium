@@ -74,10 +74,10 @@ type ParseError
     | PunctuationExpected String String Token
 
 
-parseTokensToTriples : Time.Posix -> List Token -> Result String (Set Triple)
-parseTokensToTriples time input =
+parseTokensToTriples : List Token -> Result String (Set Triple)
+parseTokensToTriples input =
     -- time is used to distinguish between multiple links between a node pair.
-    case asTriples input time of
+    case asTriples input of
         Ok triples ->
             Ok triples
 
@@ -111,11 +111,11 @@ parseErrorToString err =
                 ++ tokenToString token
 
 
-asTriples : List Token -> Time.Posix -> Result ParseError (Set Triple)
-asTriples tokens time =
+asTriples : List Token -> Result ParseError (Set Triple)
+asTriples tokens =
     --TODO: Stop on error. Probably a List.Extra function!
     --https://package.elm-lang.org/packages/elm-community/list-extra/latest/List-Extra#stoppableFoldl
-    case List.foldl (convertToTriples time) (AwaitingSubject Set.empty) tokens of
+    case List.foldl convertToTriples (AwaitingSubject Set.empty) tokens of
         AwaitingSubject triples ->
             Ok triples
 
@@ -146,8 +146,8 @@ asTriples tokens time =
             Err parseError
 
 
-convertToTriples : Time.Posix -> Token -> ParseState -> ParseState
-convertToTriples time token state =
+convertToTriples : Token -> ParseState -> ParseState
+convertToTriples token state =
     let
         newState =
             -- Debug.log "NEWSTATE" <|
@@ -213,7 +213,7 @@ convertToTriples time token state =
                             -- Can use this for named nodes and quoted values, is the plan.
                             let
                                 anonymousNode =
-                                    makeAnonNode time fromNode toNode label
+                                    makeAnonNode fromNode toNode label
 
                                 fromTriple =
                                     ( anonymousNode, "__FROM", fromNode )
@@ -287,8 +287,8 @@ convertToTriples time token state =
     newState
 
 
-makeAnonNode : Time.Posix -> String -> String -> String -> String
-makeAnonNode seed linkFrom linkTo label =
+makeAnonNode : String -> String -> String -> String
+makeAnonNode linkFrom linkTo label =
     -- Two nodes separated by "->" designates an anonymous link, we must reify.
     -- If we see these nodes again, in another sentence, we make a distinct ID.
-    "__" ++ String.fromInt (Murmur3.hashString (Time.posixToMillis seed) (linkFrom ++ linkTo ++ label))
+    "__" ++ String.fromInt (Murmur3.hashString 316487 (linkFrom ++ linkTo ++ label))

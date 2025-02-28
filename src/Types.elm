@@ -18,13 +18,15 @@ type alias FrontendModel =
     , message : String
     , diagramList : List DiagramId -- full list of what is in the backend
     , moduleList : List ModuleId -- ditto
-    , modules : Dict ModuleId Module -- loaded and active.
-    , aModule : Maybe Module -- being edited.
-    , diagrams : Dict DiagramId Diagram
+    , editingModule : Maybe Module -- being edited.
+    , diagrams : Dict DiagramId Diagram -- got a copy locally.
     , contentEditArea : String -- place to enter and edit modules and diagrams
     , tokenizedInput : List Token -- live parsing and errors.
     , parseStatus : Result String (Set Triple)
     , visual3d : Force3DLayout.Model
+    , selectedModules : Set ModuleId -- for UI enabling
+    , loadedModules : Dict ModuleId (Set Triple) -- all selected triples live here.
+    , standbyModules : Dict ModuleId (Set Triple) -- downloaded but de-selected.
     }
 
 
@@ -46,6 +48,7 @@ type FrontendMsg
     | Force3DMsg Force3DLayout.Msg
     | Tick Time.Posix
     | UserClickedParse
+    | UserTogglesModuleSelection ModuleId Bool
 
 
 type ToBackend

@@ -156,15 +156,7 @@ computeInitialPositions content model =
             -- Start by distributing nodes arbitrarily (not randomly) around a circle.
             Circle3d.withRadius (Length.meters 100) Direction3d.z Point3d.origin
                 |> Circle3d.toArc
-                |> Arc3d.segments (Dict.size content.nodes)
-                |> Polyline3d.vertices
-
-        linkCircle : List (Point3d Meters WorldCoordinates)
-        linkCircle =
-            -- Start by distributing midpoints arbitrarily (not randomly) around a circle.
-            Circle3d.withRadius (Length.meters 50) Direction3d.z Point3d.origin
-                |> Circle3d.toArc
-                |> Arc3d.segments (Dict.size content.links)
+                |> Arc3d.segments (Dict.size content.nodes + Dict.size content.links)
                 |> Polyline3d.vertices
 
         nodePositions : Dict NodeId Position
@@ -172,7 +164,7 @@ computeInitialPositions content model =
             content.nodes
                 |> Dict.map (\id node -> ( id, Maybe.withDefault id node.label ))
                 |> Dict.values
-                |> List.Extra.zip nodeCircle
+                |> List.Extra.zip (List.take (Dict.size content.nodes) nodeCircle)
                 |> List.map
                     (\( pos, ( id, label ) ) -> ( id, pointWrap pos label ))
                 |> Dict.fromList
@@ -180,24 +172,11 @@ computeInitialPositions content model =
         linkPositions : Dict LinkId Position
         linkPositions =
             content.links
-                |> Dict.map
-                    (\id link ->
-                        ( id
-                        , pointWrap
-                            (Point3d.midpoint
-                                (Dict.get link.fromNode nodePositions
-                                    |> Maybe.map .position3d
-                                    |> Maybe.withDefault Point3d.origin
-                                )
-                                (Dict.get link.toNode nodePositions
-                                    |> Maybe.map .position3d
-                                    |> Maybe.withDefault Point3d.origin
-                                )
-                            )
-                            link.label
-                        )
-                    )
+                |> Dict.map (\id link -> ( id, link.label ))
                 |> Dict.values
+                |> List.Extra.zip (List.drop (Dict.size content.nodes) nodeCircle)
+                |> List.map
+                    (\( pos, ( id, label ) ) -> ( id, pointWrap pos label ))
                 |> Dict.fromList
 
         linksAndNodes =
@@ -205,9 +184,7 @@ computeInitialPositions content model =
             Dict.union nodePositions linkPositions
 
         modelWithInitialPositions =
-            { model
-                | positions = mapToSvg model linksAndNodes
-            }
+            { model | positions = mapToSvg model linksAndNodes }
     in
     makeMeshFromCurrentPositions content.nodes content.links modelWithInitialPositions
 
