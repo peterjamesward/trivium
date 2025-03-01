@@ -19,6 +19,7 @@ type alias FrontendModel =
     , diagramList : List DiagramId -- full list of what is in the backend
     , moduleList : List ModuleId -- ditto
     , editingModule : Maybe Module -- being edited.
+    , effectiveModule : Module -- what is seen on the graph view
     , diagrams : Dict DiagramId Diagram -- got a copy locally.
     , contentEditArea : String -- place to enter and edit modules and diagrams
     , tokenizedInput : List Token -- live parsing and errors.

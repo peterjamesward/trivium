@@ -48,6 +48,7 @@ init url key =
       , diagramList = []
       , moduleList = []
       , editingModule = Nothing
+      , effectiveModule = DomainModel.emptyModule
       , diagrams = Dict.empty
       , contentEditArea = ""
       , tokenizedInput = []
@@ -72,12 +73,11 @@ subscriptions model =
 update : FrontendMsg -> Model -> ( Model, Cmd FrontendMsg )
 update msg model =
     let
-        newVisual3d loaded =
+        effectiveModule loaded =
             loaded
                 |> Dict.values
                 |> List.foldl Set.union Set.empty
                 |> moduleFromTriples
-                |> (\m -> Force3DLayout.computeInitialPositions m model.visual3d)
     in
     case msg of
         UserTogglesModuleSelection moduleId active ->
@@ -89,12 +89,16 @@ update msg model =
                         let
                             loadedModules =
                                 Dict.insert moduleId standby model.loadedModules
+
+                            effective =
+                                effectiveModule loadedModules
                         in
                         ( { model
                             | selectedModules = Set.insert moduleId model.selectedModules
                             , loadedModules = loadedModules
                             , standbyModules = Dict.remove moduleId model.standbyModules
-                            , visual3d = newVisual3d loadedModules
+                            , effectiveModule = effectiveModule loadedModules
+                            , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
                           }
                         , Cmd.none
                         )
@@ -109,6 +113,9 @@ update msg model =
                 let
                     loadedModules =
                         Dict.remove moduleId model.loadedModules
+
+                    effective =
+                        effectiveModule loadedModules
                 in
                 ( { model
                     | selectedModules = Set.remove moduleId model.selectedModules
@@ -120,7 +127,8 @@ update msg model =
 
                             Nothing ->
                                 model.standbyModules
-                    , visual3d = newVisual3d loadedModules
+                    , effectiveModule = effectiveModule loadedModules
+                    , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
                   }
                 , Cmd.none
                 )
@@ -131,18 +139,13 @@ update msg model =
             )
 
         Force3DMsg forceMsg ->
-            case model.editingModule of
-                Just activeModule ->
-                    let
-                        ( newVisual, ignoreClick ) =
-                            Force3DLayout.update forceMsg activeModule model.visual3d
-                    in
-                    ( { model | visual3d = newVisual }
-                    , Cmd.none
-                    )
-
-                Nothing ->
-                    ( model, Cmd.none )
+            let
+                ( newVisual, ignoreClick ) =
+                    Force3DLayout.update forceMsg model.effectiveModule model.visual3d
+            in
+            ( { model | visual3d = newVisual }
+            , Cmd.none
+            )
 
         UserClickedModuleId mId ->
             -- If loaded, module is move into the editing area.

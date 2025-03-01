@@ -321,11 +321,11 @@ update msg aModule model =
                     event.offsetPos
             in
             case model.dragging of
-                DragRotate lastMouseLocation ->
+                DragRotate ( lastX, lastY ) ->
                     let
                         ( dx, dy ) =
-                            ( Pixels.pixels <| newx - Tuple.first lastMouseLocation
-                            , Pixels.pixels <| newy - Tuple.second lastMouseLocation
+                            ( Pixels.pixels <| newx - lastX
+                            , Pixels.pixels <| newy - lastY
                             )
 
                         rotationRate =
@@ -339,13 +339,15 @@ update msg aModule model =
                             model.elevation
                                 |> Quantity.plus (Quantity.at rotationRate dy)
                                 |> Quantity.clamp (Angle.degrees -90) (Angle.degrees 90)
+
+                        modelWithNewView =
+                            { model
+                                | azimuth = newAzimuth
+                                , elevation = newElevation
+                                , dragging = DragRotate event.offsetPos
+                            }
                     in
-                    ( { model
-                        | azimuth = newAzimuth
-                        , elevation = newElevation
-                        , dragging = DragRotate event.offsetPos
-                        , positions = mapToSvg model model.positions
-                      }
+                    ( { modelWithNewView | positions = mapToSvg modelWithNewView modelWithNewView.positions }
                     , Nothing
                     )
 
@@ -395,12 +397,14 @@ update msg aModule model =
                                     Point2d.origin
                                         |> Point2d.translateBy shift
                                         |> Point3d.on viewPlane
+
+                                modelWithNewView =
+                                    { model
+                                        | focalPoint = newFocus
+                                        , dragging = DragPan event.offsetPos
+                                    }
                             in
-                            ( { model
-                                | focalPoint = newFocus
-                                , dragging = DragPan event.offsetPos
-                                , positions = mapToSvg model model.positions
-                              }
+                            ( { modelWithNewView | positions = mapToSvg modelWithNewView modelWithNewView.positions }
                             , Nothing
                             )
 
@@ -414,22 +418,25 @@ update msg aModule model =
             let
                 increment =
                     0.01 * delta
+
+                modelWithNewView =
+                    { model | zoomLevel = clamp -10 10 <| model.zoomLevel + increment }
             in
-            ( { model
-                | zoomLevel = clamp -10 10 <| model.zoomLevel + increment
-                , positions = mapToSvg model model.positions
-              }
+            ( { modelWithNewView | positions = mapToSvg modelWithNewView modelWithNewView.positions }
             , Nothing
             )
 
         ContentAreaChanged width height ->
-            ( { model
-                | screenRectangle =
-                    Rectangle2d.from
-                        (Point2d.xy (Pixels.pixels <| Basics.toFloat width) Quantity.zero)
-                        (Point2d.xy Quantity.zero (Pixels.pixels <| Basics.toFloat height))
-                , positions = mapToSvg model model.positions
-              }
+            let
+                modelWithNewView =
+                    { model
+                        | screenRectangle =
+                            Rectangle2d.from
+                                (Point2d.xy (Pixels.pixels <| Basics.toFloat width) Quantity.zero)
+                                (Point2d.xy Quantity.zero (Pixels.pixels <| Basics.toFloat height))
+                    }
+            in
+            ( { modelWithNewView | positions = mapToSvg modelWithNewView modelWithNewView.positions }
             , Nothing
             )
 
@@ -505,11 +512,10 @@ view wrapper model =
 
 subscriptions : (Msg -> msg) -> Model -> Sub msg
 subscriptions msgWrapper model =
-    if Time.posixToMillis model.lastTick < Time.posixToMillis model.timeLayoutBegan + 30000 then
-        Time.every 100 (msgWrapper << AnimationTick)
-
-    else
-        Sub.none
+    -- if Time.posixToMillis model.lastTick < Time.posixToMillis model.timeLayoutBegan + 30000 then
+    --     Time.every 100 (msgWrapper << AnimationTick)
+    -- else
+    Sub.none
 
 
 applyForces :
