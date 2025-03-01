@@ -9,6 +9,7 @@ import BoundingBox3d exposing (..)
 import Camera3d exposing (..)
 import Circle3d exposing (..)
 import Color
+import CommonUiElements exposing (..)
 import Cone3d
 import Cylinder3d
 import Dict exposing (Dict)
@@ -16,6 +17,7 @@ import Direction2d exposing (..)
 import Direction3d exposing (..)
 import DomainModel exposing (..)
 import Element exposing (..)
+import Element.Input as Input
 import Frame2d
 import Frame3d
 import Geometry.Svg as Svg
@@ -78,6 +80,7 @@ type alias Model =
     , positions : Dict String Position
     , timeLayoutBegan : Time.Posix
     , lastTick : Time.Posix
+    , animation : Bool
 
     -- Rendering.
     , azimuth : Angle -- Orbiting angle of the camera around the focal point
@@ -106,19 +109,22 @@ type Msg
     | ContentAreaChanged Int Int
     | UserClick Mouse.Event
     | ClickDelayExpired
+    | UserClicksPlay
+    | UserClicksPause
 
 
 init : ( Int, Int ) -> Model
 init ( width, height ) =
     { -- Layout.
       repulsion = 1.0
-    , tension = 3.0
+    , tension = 1.0
     , fieldStrength = 0.1
     , gravitationalConstant = 0.05
     , timeDelta = 0.1
     , positions = Dict.empty
     , timeLayoutBegan = Time.millisToPosix 0
     , lastTick = Time.millisToPosix 0
+    , animation = False
 
     -- Rendering.
     , azimuth = Angle.degrees 45
@@ -250,14 +256,14 @@ update :
     -> ( Model, Maybe String )
 update msg aModule model =
     case msg of
-        AnimationTick now ->
-            ( { model | lastTick = now }
-                |> (if Time.posixToMillis now < Time.posixToMillis model.timeLayoutBegan + 30000 then
-                        applyForces aModule
+        UserClicksPlay ->
+            ( { model | animation = True }, Nothing )
 
-                    else
-                        identity
-                   )
+        UserClicksPause ->
+            ( { model | animation = False }, Nothing )
+
+        AnimationTick now ->
+            ( { model | lastTick = now } |> applyForces aModule
             , Nothing
             )
 
@@ -483,31 +489,44 @@ view wrapper model =
         ( w, h ) =
             Rectangle2d.dimensions model.screenRectangle
     in
-    Element.el
-        [ htmlAttribute <| Mouse.onDown (wrapper << MouseDown)
-        , htmlAttribute <| Mouse.onMove (wrapper << MouseMove)
-        , htmlAttribute <| Mouse.onUp (wrapper << MouseUp)
-        , htmlAttribute <| Wheel.onWheel (wrapper << MouseWheel << .deltaY)
-        , Element.width fill
-        , Element.height fill
-        , htmlAttribute <| Mouse.onClick (UserClick >> wrapper)
-
-        --, htmlAttribute <| Mouse.onDoubleClick (ImageDoubleClick >> msgWrapper)
-        , inFront <| textOverlay model
-        , onContextMenu (wrapper NoOp)
-        ]
-    <|
-        Element.html <|
-            Scene3d.sunny
-                { camera = camera
-                , clipDepth = Length.meters 0.1
-                , dimensions = ( Quantity.round w, Quantity.round h )
-                , background = Scene3d.backgroundColor Color.lightGrey
-                , entities = model.scene
-                , shadows = True
-                , sunlightDirection = Direction3d.xyZ (Angle.degrees 45) (Angle.degrees 70)
-                , upDirection = Direction3d.positiveZ
+    column CommonUiElements.columnStyles
+        [ if model.animation then
+            Input.button CommonUiElements.buttonStyles
+                { label = text "Pause"
+                , onPress = Just (wrapper UserClicksPause)
                 }
+
+          else
+            Input.button CommonUiElements.buttonStyles
+                { label = text "Play"
+                , onPress = Just (wrapper UserClicksPlay)
+                }
+        , Element.el
+            [ htmlAttribute <| Mouse.onDown (wrapper << MouseDown)
+            , htmlAttribute <| Mouse.onMove (wrapper << MouseMove)
+            , htmlAttribute <| Mouse.onUp (wrapper << MouseUp)
+            , htmlAttribute <| Wheel.onWheel (wrapper << MouseWheel << .deltaY)
+            , Element.width fill
+            , Element.height fill
+            , htmlAttribute <| Mouse.onClick (UserClick >> wrapper)
+
+            --, htmlAttribute <| Mouse.onDoubleClick (ImageDoubleClick >> msgWrapper)
+            , inFront <| textOverlay model
+            , onContextMenu (wrapper NoOp)
+            ]
+          <|
+            Element.html <|
+                Scene3d.sunny
+                    { camera = camera
+                    , clipDepth = Length.meters 0.1
+                    , dimensions = ( Quantity.round w, Quantity.round h )
+                    , background = Scene3d.backgroundColor Color.lightGrey
+                    , entities = model.scene
+                    , shadows = True
+                    , sunlightDirection = Direction3d.xyZ (Angle.degrees 45) (Angle.degrees 70)
+                    , upDirection = Direction3d.positiveZ
+                    }
+        ]
 
 
 subscriptions : (Msg -> msg) -> Model -> Sub msg
@@ -515,7 +534,11 @@ subscriptions msgWrapper model =
     -- if Time.posixToMillis model.lastTick < Time.posixToMillis model.timeLayoutBegan + 30000 then
     --     Time.every 100 (msgWrapper << AnimationTick)
     -- else
-    Sub.none
+    if model.animation then
+        Time.every 100 (msgWrapper << AnimationTick)
+
+    else
+        Sub.none
 
 
 applyForces :
@@ -600,9 +623,9 @@ applyForces theModule model =
                                 )
                         in
                         case
-                            ( Dict.get s model.positions
-                            , Dict.get way model.positions
-                            , Dict.get o model.positions
+                            ( Dict.get s forcesDict
+                            , Dict.get way forcesDict
+                            , Dict.get o forcesDict
                             )
                         of
                             ( Just subject, Just waypoint, Just object ) ->

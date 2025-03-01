@@ -1,19 +1,21 @@
 
 # WIP
 
-- Space all nodes and link midpoints so that there are no overlaps (randomly would be OK)
-- Maybe add random force (diminishing).
-- Don't download if we already have it (hidden dict?).
-- Highlight yellow when waiting for a module to download.
-- Should we see only the single set when editing?
+
+- Render a cone at link waypoint.
+- Auto-stop animation after some seconds.
+- Option to show all triples as "non-semantic" graph.
+- Styling - shapes and colours.
 
 - Ability to add Layout instead of Module.
 - Allow selection of one Layout for editing.
-- Option to show all triples as "non-semantic" graph.
-- Play/Pause button for animation + restart/randomise.
-- When adding content, do not disturb current positions
 
-- Overhaul the UI.
+- When adding content, preserve current positions
+- Maybe add random force (diminishing).
+- Highlight yellow when waiting for a module to download.
+- Should we see only the single set when editing?
+
+- Tidy the UI.
 - Make labels clearer with background and border (or similar).
 - Make multiple tabs in main window (input | output).
 - Report lex and parse errors with line and column.
