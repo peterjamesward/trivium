@@ -2,8 +2,7 @@
 # WIP
 
 
-- Render a cone at link waypoint.
-- Auto-stop animation after some seconds.
+- Auto-stop animation after some seconds, or if no motion can be detected would be nice.
 - Option to show all triples as "non-semantic" graph.
 - Styling - shapes and colours.
 

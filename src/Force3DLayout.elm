@@ -119,7 +119,7 @@ init ( width, height ) =
       repulsion = 1.0
     , tension = 1.0
     , fieldStrength = 0.1
-    , gravitationalConstant = 0.05
+    , gravitationalConstant = 0.01
     , timeDelta = 0.1
     , positions = Dict.empty
     , timeLayoutBegan = Time.millisToPosix 0
@@ -127,8 +127,8 @@ init ( width, height ) =
     , animation = False
 
     -- Rendering.
-    , azimuth = Angle.degrees 45
-    , elevation = Angle.degrees 30
+    , azimuth = Angle.degrees 0
+    , elevation = Angle.degrees 90
     , scene = []
     , zoomLevel = 0.0
     , focalPoint = Point3d.origin
@@ -233,11 +233,29 @@ makeMeshFromCurrentPositions nodes links model =
                             )
                         of
                             ( Just from, Just mid, Just to ) ->
-                                [ Cylinder3d.from from.position3d mid.position3d (Length.meters 2)
-                                , Cylinder3d.from mid.position3d to.position3d (Length.meters 2)
-                                ]
-                                    |> List.filterMap identity
-                                    |> List.map (Scene3d.cylinder (Material.color Color.blue))
+                                let
+                                    direction =
+                                        Direction3d.from from.position3d to.position3d
+                                            |> Maybe.withDefault Direction3d.positiveZ
+
+                                    cone =
+                                        Cone3d.startingAt
+                                            mid.position3d
+                                            direction
+                                            { radius = Length.meters 4
+                                            , length = Length.meters 10
+                                            }
+
+                                    shiftedCone =
+                                        cone |> Cone3d.translateIn direction (Length.meters -5)
+                                in
+                                Scene3d.cone (Material.color Color.blue) shiftedCone
+                                    :: ([ Cylinder3d.from from.position3d mid.position3d (Length.meters 2)
+                                        , Cylinder3d.from mid.position3d to.position3d (Length.meters 2)
+                                        ]
+                                            |> List.filterMap identity
+                                            |> List.map (Scene3d.cylinder (Material.color Color.blue))
+                                       )
 
                             _ ->
                                 []
