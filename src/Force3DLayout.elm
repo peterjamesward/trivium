@@ -196,34 +196,52 @@ computeInitialPositions content model =
         modelWithInitialPositions =
             { model | positions = mapToSvg model linksAndNodes }
     in
-    makeMeshFromCurrentPositions content.nodes content.links modelWithInitialPositions
+    makeMeshFromCurrentPositions content modelWithInitialPositions
 
 
 makeMeshFromCurrentPositions :
-    Dict NodeId Node
-    -> Dict LinkId Link
+    Module
     -> Model
     -> Model
-makeMeshFromCurrentPositions nodes links model =
+makeMeshFromCurrentPositions aModule model =
     let
         nodeMesh =
-            nodes
-                |> Dict.keys
-                |> List.filterMap
-                    (\nodeId ->
+            --TODO: Styling.
+            aModule.nodes
+                |> Dict.map
+                    (\nodeId node ->
+                        let
+                            style =
+                                DomainModel.nodeStyle aModule node
+                        in
                         case Dict.get nodeId model.positions of
                             Just position ->
-                                Sphere3d.withRadius (Length.meters 8) position.position3d
-                                    |> Scene3d.sphere (Material.color Color.red)
-                                    |> Just
+                                case style.shape of
+                                    Cube ->
+                                        Block3d.centeredOn
+                                            (Frame3d.atPoint position.position3d)
+                                            ( Length.meters 8
+                                            , Length.meters 8
+                                            , Length.meters 8
+                                            )
+                                            |> Scene3d.block (Material.color style.colour)
+                                            |> Just
+
+                                    _ ->
+                                        Sphere3d.withRadius (Length.meters 8) position.position3d
+                                            |> Scene3d.sphere (Material.color style.colour)
+                                            |> Just
 
                             Nothing ->
                                 Nothing
                     )
+                |> Dict.values
+                |> List.filterMap identity
 
         linkMesh =
             -- NOTE: The linkId acts like a virtual node in the positions dict.
-            links
+            --TODO: Styling.
+            aModule.links
                 |> Dict.values
                 |> List.concatMap
                     (\link ->
@@ -801,7 +819,7 @@ applyForces theModule model =
         modelWithNewPositions =
             { model | positions = mapToSvg model newPositions }
     in
-    makeMeshFromCurrentPositions nodes links modelWithNewPositions
+    makeMeshFromCurrentPositions theModule modelWithNewPositions
 
 
 mapToSvg :

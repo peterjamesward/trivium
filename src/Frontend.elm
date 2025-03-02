@@ -170,8 +170,22 @@ update msg model =
 
         UserClickedSave ->
             case ( model.editingModule, model.parseStatus ) of
+                --TODO: update cached copy and regenerate visuals.
                 ( Just m, Ok triples ) ->
-                    ( model, Lamdera.sendToBackend (SaveModule m.id triples) )
+                    let
+                        loadedModules =
+                            Dict.insert m.id triples model.loadedModules
+
+                        effective =
+                            effectiveModule loadedModules
+                    in
+                    ( { model
+                        | loadedModules = loadedModules
+                        , effectiveModule = effectiveModule loadedModules
+                        , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
+                      }
+                    , Lamdera.sendToBackend (SaveModule m.id triples)
+                    )
 
                 _ ->
                     ( model, Cmd.none )
@@ -225,13 +239,6 @@ update msg model =
                 | tokenizedInput = tokens
                 , parseStatus = parse
                 , editingModule = aModule
-
-                -- , visual3d =
-                --     case aModule of
-                --         Just isModule ->
-                --             Force3DLayout.computeInitialPositions isModule model.visual3d
-                --         Nothing ->
-                --             model.visual3d
               }
             , Cmd.none
             )

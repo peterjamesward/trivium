@@ -190,20 +190,71 @@ shapeTable =
         ]
 
 
-linkStyle : Module -> Link -> Style
-linkStyle content link =
-    -- 1. Maybe the link has "direction" and "colour".
+
+-- linkStyle : Module -> Link -> Style
+-- linkStyle content link =
+--     -- 1. Maybe the link has "direction" and "colour".
+--     -- 2. If not, perhaps its class does.
+--     --TODO: 3. If not, perhaps its class is bound to a Style.
+--     -- Failing that return the default.
+--     let
+--         colour =
+--             Dict.get "colour" link.attributes
+--                 |> Maybe.withDefault Set.empty
+--                 |> Set.toList
+--                 |> List.head
+--                 |> Maybe.withDefault
+--                     (link.class
+--                         |> Maybe.map (\classId -> Dict.get classId content.classes)
+--                         |> Maybe.Extra.join
+--                         |> Maybe.andThen
+--                             (\class ->
+--                                 Dict.get "colour" class.attributes
+--                                     |> Maybe.withDefault Set.empty
+--                                     |> Set.toList
+--                                     |> List.head
+--                             )
+--                         |> Maybe.withDefault "orange"
+--                     )
+--         shape =
+--             Dict.get "shape" link.attributes
+--                 |> Maybe.withDefault Set.empty
+--                 |> Set.toList
+--                 |> List.head
+--                 |> Maybe.withDefault
+--                     (link.class
+--                         |> Maybe.map (\classId -> Dict.get classId content.classes)
+--                         |> Maybe.Extra.join
+--                         |> Maybe.andThen
+--                             (\class ->
+--                                 Dict.get "shape" class.attributes
+--                                     |> Maybe.withDefault Set.empty
+--                                     |> Set.toList
+--                                     |> List.head
+--                             )
+--                         |> Maybe.withDefault "sphere"
+--                     )
+--     in
+--     { id = ""
+--     , colour = Dict.get colour colourTable |> Maybe.withDefault Color.blue
+--     , shape = Dict.get shape shapeTable |> Maybe.withDefault Sphere
+--     }
+
+
+nodeStyle : Module -> Node -> Style
+nodeStyle content node =
+    -- 1. Maybe the node has "shape" and "colour".
     -- 2. If not, perhaps its class does.
     --TODO: 3. If not, perhaps its class is bound to a Style.
     -- Failing that return the default.
     let
         colour =
-            Dict.get "colour" link.attributes
+            Dict.get "colour" node.attributes
                 |> Maybe.withDefault Set.empty
                 |> Set.toList
                 |> List.head
                 |> Maybe.withDefault
-                    (link.class
+                    (node.class
                         |> Maybe.map (\classId -> Dict.get classId content.classes)
                         |> Maybe.Extra.join
                         |> Maybe.andThen
@@ -217,12 +268,12 @@ linkStyle content link =
                     )
 
         shape =
-            Dict.get "shape" link.attributes
+            Dict.get "shape" node.attributes
                 |> Maybe.withDefault Set.empty
                 |> Set.toList
                 |> List.head
                 |> Maybe.withDefault
-                    (link.class
+                    (node.class
                         |> Maybe.map (\classId -> Dict.get classId content.classes)
                         |> Maybe.Extra.join
                         |> Maybe.andThen
