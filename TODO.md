@@ -5,6 +5,8 @@ BUG: Play loses the mesh.
 
 - Option to show all triples as "non-semantic" graph.
 - Styling - shapes and colours.
+- Change link directioh logic to also use styles, but allow for all options
+( e.g. styling on a link overrides that on the type, which overrides the bound style.)
 
 - Ability to add Layout instead of Module.
 - Allow selection of one Layout for editing.

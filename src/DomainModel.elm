@@ -3,6 +3,7 @@ module DomainModel exposing (..)
 import Color exposing (..)
 import Dict exposing (..)
 import Direction3d exposing (..)
+import Maybe.Extra
 import Set exposing (..)
 
 
@@ -66,8 +67,13 @@ type alias OuterDict =
 
 
 type alias Style =
-    -- Essentially, we use class attribute for layout and rendering.
-    -- Put these here not in Class, so we can rebind them for each dagram.
+    {- Essentially, we use class attribute for layout and rendering.
+       Put these here not in Class, so we can rebind them for each dagram.
+       I guess the usage could be:
+       likeAnOrange is Style; colour orange; shape sphere;
+       affects thisNodeType, thatNodeType.
+       Links only use the colour entry.
+    -}
     { id : StyleId
     , colour : Color
     , shape : Shape
@@ -137,34 +143,56 @@ type alias Diagram =
 
 preferredLinkDirection : Module -> Link -> Maybe (Direction3d WorldCoordinates)
 preferredLinkDirection content link =
-    case link.class of
-        Just class ->
-            case Dict.get class content.classes of
-                Just theClass ->
-                    case Dict.get "direction" theClass.attributes of
-                        Just directions ->
-                            let
-                                direction =
-                                    directions
-                                        |> Set.toList
-                                        |> List.head
-                                        |> Maybe.withDefault "none"
-                            in
-                            Dict.get (String.toLower direction) <|
-                                Dict.fromList
-                                    [ ( "north", Direction3d.positiveY )
-                                    , ( "south", Direction3d.negativeY )
-                                    , ( "east", Direction3d.positiveX )
-                                    , ( "west", Direction3d.negativeX )
-                                    , ( "up", Direction3d.positiveZ )
-                                    , ( "down", Direction3d.negativeZ )
-                                    ]
+    link.class
+        |> Maybe.map (\classId -> Dict.get classId content.classes)
+        |> Maybe.Extra.join
+        |> Maybe.andThen (\class -> Dict.get "direction" class.attributes)
+        |> Maybe.withDefault Set.empty
+        |> Set.toList
+        |> List.head
+        |> Maybe.withDefault "none"
+        |> (\asString -> Dict.get asString directionTable)
 
-                        Nothing ->
-                            Nothing
 
-                Nothing ->
-                    Nothing
+directionTable =
+    Dict.fromList
+        [ ( "north", Direction3d.positiveY )
+        , ( "south", Direction3d.negativeY )
+        , ( "east", Direction3d.positiveX )
+        , ( "west", Direction3d.negativeX )
+        , ( "up", Direction3d.positiveZ )
+        , ( "down", Direction3d.negativeZ )
+        ]
 
-        Nothing ->
-            Nothing
+
+
+-- linkStyle : Module -> Link -> Style
+-- linkStyle content link =
+--     -- 1. Maybe the link has "direction" and "colour".
+--     -- 2. If not, perhaps its class does.
+--     --TODO: 3. If not, perhaps its class is bound to a Style.
+--     -- Failing that return the default.
+--     let
+--         colour =
+--             Dict.get "colour" link.attributes
+--                 |> Maybe.withDefault Set.empty
+--                 |> Set.toList
+--                 |> List.head
+--                 |> Maybe.withDefault
+--                     (link.class
+--                         |> Maybe.map (\classId -> Dict.get classId content.classes)
+--                         |> Maybe.Extra.join
+--                         |> Maybe.andThen
+--                             (\class ->
+--                                 Dict.get "colour" class.attributes
+--                                     |> Maybe.withDefault Set.empty
+--                                     |> Set.toList
+--                                     |> List.head
+--                             )
+--                         |> Maybe.withDefault "orange"
+--                     )
+--     in
+--     { id = "doesn't matter"
+--     , colour = colour
+--     , shape = Sphere
+--     }
