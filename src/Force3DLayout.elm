@@ -212,8 +212,8 @@ makeMeshFromCurrentPositions aModule model =
                     (\nodeId node ->
                         let
                             style =
-                                Debug.log "STYLE" <|
-                                    DomainModel.nodeStyle aModule node
+                                -- Debug.log "STYLE" <|
+                                DomainModel.nodeStyle aModule node
                         in
                         case Dict.get nodeId model.positions of
                             Just position ->
@@ -262,6 +262,11 @@ makeMeshFromCurrentPositions aModule model =
                 |> Dict.values
                 |> List.concatMap
                     (\link ->
+                        let
+                            style =
+                                -- Debug.log "STYLE" <|
+                                DomainModel.linkStyle aModule link
+                        in
                         case
                             ( Dict.get link.fromNode model.positions
                             , Dict.get link.linkId model.positions
@@ -285,12 +290,12 @@ makeMeshFromCurrentPositions aModule model =
                                     shiftedCone =
                                         cone |> Cone3d.translateIn direction (Length.meters -5)
                                 in
-                                Scene3d.cone (Material.color Color.blue) shiftedCone
+                                Scene3d.cone (Material.color style.colour) shiftedCone
                                     :: ([ Cylinder3d.from from.position3d mid.position3d (Length.meters 1)
                                         , Cylinder3d.from mid.position3d to.position3d (Length.meters 1)
                                         ]
                                             |> List.filterMap identity
-                                            |> List.map (Scene3d.cylinder (Material.color Color.blue))
+                                            |> List.map (Scene3d.cylinder (Material.color style.colour))
                                        )
 
                             _ ->
