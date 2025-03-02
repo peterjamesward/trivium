@@ -273,6 +273,7 @@ updateFromBackend msg model =
             in
             ( { model
                 | loadedModules = withAddedModule
+                , effectiveModule = newModule
                 , visual3d = Force3DLayout.computeInitialPositions newModule model.visual3d
               }
             , Cmd.none

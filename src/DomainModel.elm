@@ -143,6 +143,7 @@ type alias Diagram =
 
 preferredLinkDirection : Module -> Link -> Maybe (Direction3d WorldCoordinates)
 preferredLinkDirection content link =
+    --TODO: Use any bound Style if no direction on the class.
     link.class
         |> Maybe.map (\classId -> Dict.get classId content.classes)
         |> Maybe.Extra.join
@@ -165,34 +166,76 @@ directionTable =
         ]
 
 
+colourTable =
+    Dict.fromList
+        [ ( "red", Color.red )
+        , ( "orange", Color.orange )
+        , ( "yellow", Color.yellow )
+        , ( "green", Color.green )
+        , ( "blue", Color.blue )
+        , ( "purple", Color.purple )
+        , ( "brown", Color.brown )
+        , ( "black", Color.black )
+        , ( "grey", Color.grey )
+        , ( "white", Color.white )
+        ]
 
--- linkStyle : Module -> Link -> Style
--- linkStyle content link =
---     -- 1. Maybe the link has "direction" and "colour".
---     -- 2. If not, perhaps its class does.
---     --TODO: 3. If not, perhaps its class is bound to a Style.
---     -- Failing that return the default.
---     let
---         colour =
---             Dict.get "colour" link.attributes
---                 |> Maybe.withDefault Set.empty
---                 |> Set.toList
---                 |> List.head
---                 |> Maybe.withDefault
---                     (link.class
---                         |> Maybe.map (\classId -> Dict.get classId content.classes)
---                         |> Maybe.Extra.join
---                         |> Maybe.andThen
---                             (\class ->
---                                 Dict.get "colour" class.attributes
---                                     |> Maybe.withDefault Set.empty
---                                     |> Set.toList
---                                     |> List.head
---                             )
---                         |> Maybe.withDefault "orange"
---                     )
---     in
---     { id = "doesn't matter"
---     , colour = colour
---     , shape = Sphere
---     }
+
+shapeTable =
+    Dict.fromList
+        [ ( "cube", Cube )
+        , ( "cone", Cone )
+        , ( "cylinder", Cylinder )
+        , ( "sphere", Sphere )
+        ]
+
+
+linkStyle : Module -> Link -> Style
+linkStyle content link =
+    -- 1. Maybe the link has "direction" and "colour".
+    -- 2. If not, perhaps its class does.
+    --TODO: 3. If not, perhaps its class is bound to a Style.
+    -- Failing that return the default.
+    let
+        colour =
+            Dict.get "colour" link.attributes
+                |> Maybe.withDefault Set.empty
+                |> Set.toList
+                |> List.head
+                |> Maybe.withDefault
+                    (link.class
+                        |> Maybe.map (\classId -> Dict.get classId content.classes)
+                        |> Maybe.Extra.join
+                        |> Maybe.andThen
+                            (\class ->
+                                Dict.get "colour" class.attributes
+                                    |> Maybe.withDefault Set.empty
+                                    |> Set.toList
+                                    |> List.head
+                            )
+                        |> Maybe.withDefault "orange"
+                    )
+
+        shape =
+            Dict.get "shape" link.attributes
+                |> Maybe.withDefault Set.empty
+                |> Set.toList
+                |> List.head
+                |> Maybe.withDefault
+                    (link.class
+                        |> Maybe.map (\classId -> Dict.get classId content.classes)
+                        |> Maybe.Extra.join
+                        |> Maybe.andThen
+                            (\class ->
+                                Dict.get "shape" class.attributes
+                                    |> Maybe.withDefault Set.empty
+                                    |> Set.toList
+                                    |> List.head
+                            )
+                        |> Maybe.withDefault "sphere"
+                    )
+    in
+    { id = ""
+    , colour = Dict.get colour colourTable |> Maybe.withDefault Color.blue
+    , shape = Dict.get shape shapeTable |> Maybe.withDefault Sphere
+    }

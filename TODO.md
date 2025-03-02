@@ -3,8 +3,8 @@
 
 BUG: Play loses the mesh.
 
-- Option to show all triples as "non-semantic" graph.
 - Styling - shapes and colours.
+- Option to show all triples as "non-semantic" graph.
 - Change link directioh logic to also use styles, but allow for all options
 ( e.g. styling on a link overrides that on the type, which overrides the bound style.)
 
