@@ -38,8 +38,7 @@ withClasses classes =
         phrases : Class -> String
         phrases class =
             (Dict.map attribute class.attributes |> Dict.values)
-                |> String.join """;
-"""
+                |> String.join """"""
     in
     classes
         |> Dict.values

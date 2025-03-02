@@ -212,7 +212,8 @@ makeMeshFromCurrentPositions aModule model =
                     (\nodeId node ->
                         let
                             style =
-                                DomainModel.nodeStyle aModule node
+                                Debug.log "STYLE" <|
+                                    DomainModel.nodeStyle aModule node
                         in
                         case Dict.get nodeId model.positions of
                             Just position ->
@@ -220,15 +221,31 @@ makeMeshFromCurrentPositions aModule model =
                                     Cube ->
                                         Block3d.centeredOn
                                             (Frame3d.atPoint position.position3d)
-                                            ( Length.meters 8
-                                            , Length.meters 8
-                                            , Length.meters 8
+                                            ( Length.meters 9
+                                            , Length.meters 9
+                                            , Length.meters 9
                                             )
                                             |> Scene3d.block (Material.color style.colour)
                                             |> Just
 
+                                    Cylinder ->
+                                        Cylinder3d.centeredOn
+                                            (Point3d.translateIn Direction3d.negativeZ (Length.meters 4) position.position3d)
+                                            Direction3d.positiveZ
+                                            { radius = Length.meters 5, length = Length.meters 12 }
+                                            |> Scene3d.cylinder (Material.color style.colour)
+                                            |> Just
+
+                                    Cone ->
+                                        Cone3d.startingAt
+                                            position.position3d
+                                            Direction3d.positiveZ
+                                            { radius = Length.meters 5, length = Length.meters 12 }
+                                            |> Scene3d.cone (Material.color style.colour)
+                                            |> Just
+
                                     _ ->
-                                        Sphere3d.withRadius (Length.meters 8) position.position3d
+                                        Sphere3d.withRadius (Length.meters 5) position.position3d
                                             |> Scene3d.sphere (Material.color style.colour)
                                             |> Just
 
@@ -261,7 +278,7 @@ makeMeshFromCurrentPositions aModule model =
                                         Cone3d.startingAt
                                             mid.position3d
                                             direction
-                                            { radius = Length.meters 4
+                                            { radius = Length.meters 2
                                             , length = Length.meters 10
                                             }
 
@@ -269,8 +286,8 @@ makeMeshFromCurrentPositions aModule model =
                                         cone |> Cone3d.translateIn direction (Length.meters -5)
                                 in
                                 Scene3d.cone (Material.color Color.blue) shiftedCone
-                                    :: ([ Cylinder3d.from from.position3d mid.position3d (Length.meters 2)
-                                        , Cylinder3d.from mid.position3d to.position3d (Length.meters 2)
+                                    :: ([ Cylinder3d.from from.position3d mid.position3d (Length.meters 1)
+                                        , Cylinder3d.from mid.position3d to.position3d (Length.meters 1)
                                         ]
                                             |> List.filterMap identity
                                             |> List.map (Scene3d.cylinder (Material.color Color.blue))
