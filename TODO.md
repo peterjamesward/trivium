@@ -1,18 +1,18 @@
 
 # WIP
 
+BUG: Play loses the mesh.
 
-- Auto-stop animation after some seconds, or if no motion can be detected would be nice.
 - Option to show all triples as "non-semantic" graph.
 - Styling - shapes and colours.
 
 - Ability to add Layout instead of Module.
 - Allow selection of one Layout for editing.
+- Add Inspector pane.
 
 - When adding content, preserve current positions
 - Maybe add random force (diminishing).
 - Highlight yellow when waiting for a module to download.
-- Should we see only the single set when editing?
 
 - Tidy the UI.
 - Make labels clearer with background and border (or similar).
@@ -20,8 +20,8 @@
 - Report lex and parse errors with line and column.
 - Highlight loaded modules that are outdated.
 - Optimise repulsive forces with octree.
+- Auto-stop animation after some seconds, or if no motion can be detected would be nice.
 
-- Add Inspector pane.
 - Save to file.
 - File load.
 

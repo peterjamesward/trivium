@@ -29,6 +29,7 @@ import Length exposing (Meters)
 import List.Extra
 import Maybe.Extra
 import Pixels exposing (..)
+import Plane3d exposing (..)
 import Point2d exposing (..)
 import Point3d exposing (..)
 import Point3d.Projection
@@ -92,6 +93,7 @@ type alias Model =
     , screenRectangle : Rectangle2d Pixels SVGCoordinates
     , waitingForClickDelay : Bool
     , biggestBox : BoundingBox3d Meters WorldCoordinates
+    , rawTripleMode : Bool
     }
 
 
@@ -111,6 +113,7 @@ type Msg
     | ClickDelayExpired
     | UserClicksPlay
     | UserClicksPause
+    | UserTogglesRawTripleMode Bool
 
 
 init : ( Int, Int ) -> Model
@@ -118,7 +121,7 @@ init ( width, height ) =
     { -- Layout.
       repulsion = 1.0
     , tension = 1.0
-    , fieldStrength = 0.1
+    , fieldStrength = 0.2
     , gravitationalConstant = 0.01
     , timeDelta = 0.1
     , positions = Dict.empty
@@ -139,6 +142,7 @@ init ( width, height ) =
             (Point2d.xy Quantity.zero (Pixels.pixels <| Basics.toFloat height))
     , waitingForClickDelay = False
     , biggestBox = BoundingBox3d.singleton Point3d.origin
+    , rawTripleMode = False
     }
 
 
@@ -203,9 +207,6 @@ makeMeshFromCurrentPositions :
 makeMeshFromCurrentPositions nodes links model =
     let
         nodeMesh =
-            --TODO: Put back the forces and animation.
-            --TODO: SVG overlay.
-            --TODO: Invert 2d points for click lookup. ( point -> Node | Link ).
             nodes
                 |> Dict.keys
                 |> List.filterMap
@@ -261,10 +262,7 @@ makeMeshFromCurrentPositions nodes links model =
                                 []
                     )
     in
-    { model
-        | timeLayoutBegan = model.lastTick
-        , scene = nodeMesh ++ linkMesh
-    }
+    { model | scene = nodeMesh ++ linkMesh }
 
 
 update :
@@ -274,6 +272,9 @@ update :
     -> ( Model, Maybe String )
 update msg aModule model =
     case msg of
+        UserTogglesRawTripleMode rawMode ->
+            ( { model | rawTripleMode = rawMode }, Nothing )
+
         UserClicksPlay ->
             ( { model | animation = True }, Nothing )
 
@@ -508,17 +509,25 @@ view wrapper model =
             Rectangle2d.dimensions model.screenRectangle
     in
     column CommonUiElements.columnStyles
-        [ if model.animation then
-            Input.button CommonUiElements.buttonStyles
-                { label = text "Pause"
-                , onPress = Just (wrapper UserClicksPause)
-                }
+        [ row neatRowStyles
+            [ if model.animation then
+                Input.button CommonUiElements.buttonStyles
+                    { label = text "Pause"
+                    , onPress = Just (wrapper UserClicksPause)
+                    }
 
-          else
-            Input.button CommonUiElements.buttonStyles
-                { label = text "Play"
-                , onPress = Just (wrapper UserClicksPlay)
+              else
+                Input.button CommonUiElements.buttonStyles
+                    { label = text "Play"
+                    , onPress = Just (wrapper UserClicksPlay)
+                    }
+            , Input.checkbox [ centerY, alignRight ]
+                { onChange = wrapper << UserTogglesRawTripleMode
+                , icon = Input.defaultCheckbox
+                , checked = model.rawTripleMode
+                , label = Input.labelRight [] (text "Show raw triples")
                 }
+            ]
         , Element.el
             [ htmlAttribute <| Mouse.onDown (wrapper << MouseDown)
             , htmlAttribute <| Mouse.onMove (wrapper << MouseMove)
@@ -718,29 +727,55 @@ applyForces theModule model =
                     case preferredLinkDirection theModule reified of
                         Just desiredDirection ->
                             -- Note that these forces apply to the "actual" subject and object.
+                            -- If the actual and desired direction define a plane, we will
+                            -- try to move the endpoints within that plane perpendicular
+                            -- to their current direction. This is more effective than moving
+                            -- directly towards the optimal.
+                            -- If the directions align so there is
+                            -- no plane, any orthogonal direction will do. We will multiply
+                            -- the force by the angle between directions, becoming zero if
+                            -- they align, so we don't test for that case.
                             let
+                                endIfAligned =
+                                    -- WHere's the ideal endpoint? Need this to define a plane.
+                                    Point3d.translateIn desiredDirection Length.meter subject.position3d
+
                                 currentVector =
                                     Vector3d.from subject.position3d object.position3d
 
-                                desiredVector =
-                                    Vector3d.withLength
-                                        (Vector3d.length currentVector)
-                                        desiredDirection
-
+                                correctiveForceAtStart : Vector3d Meters WorldCoordinates
                                 correctiveForceAtStart =
-                                    desiredVector
-                                        |> Vector3d.minus currentVector
-                                        |> Vector3d.multiplyBy model.fieldStrength
+                                    case
+                                        ( Plane3d.throughPoints subject.position3d object.position3d endIfAligned
+                                        , Vector3d.direction currentVector
+                                        )
+                                    of
+                                        ( Just commonPlane, Just currentDirection ) ->
+                                            -- We can now find the normal
+                                            let
+                                                planeNormalAxis =
+                                                    Plane3d.normalAxis commonPlane
+
+                                                rotation =
+                                                    Direction3d.angleFrom currentDirection desiredDirection
+                                            in
+                                            currentVector
+                                                |> Vector3d.rotateAround planeNormalAxis (Angle.degrees 90)
+                                                |> Vector3d.scaleTo (Length.meters <| Angle.inTurns rotation)
+                                                |> Vector3d.multiplyBy model.fieldStrength
+
+                                        _ ->
+                                            currentVector
+                                                |> Vector3d.perpendicularTo
+                                                |> Vector3d.scaleTo Length.meter
+                                                |> Vector3d.multiplyBy model.fieldStrength
 
                                 correctiveForceAEnd =
                                     Vector3d.reverse correctiveForceAtStart
-                                        |> Vector3d.multiplyBy model.fieldStrength
                             in
                             collector
                                 |> Dict.insert reified.fromNode
-                                    { subject
-                                        | force = Vector3d.plus subject.force correctiveForceAtStart
-                                    }
+                                    { subject | force = Vector3d.plus subject.force correctiveForceAtStart }
                                 |> Dict.insert reified.toNode
                                     { object | force = Vector3d.plus object.force correctiveForceAEnd }
 
