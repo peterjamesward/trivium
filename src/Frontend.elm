@@ -57,6 +57,7 @@ init url key =
       , selectedModules = Set.empty
       , loadedModules = Dict.empty
       , standbyModules = Dict.empty
+      , showRawTriples = False
       }
     , Lamdera.sendToBackend RequestModuleList
     )
@@ -78,8 +79,31 @@ update msg model =
                 |> Dict.values
                 |> List.foldl Set.union Set.empty
                 |> moduleFromTriples
+
+        rawModule loaded =
+            loaded
+                |> Dict.values
+                |> List.foldl Set.union Set.empty
+                |> rawFromTriples
     in
     case msg of
+        UserTogglesRawMode isRaw ->
+            let
+                effective =
+                    if isRaw then
+                        rawModule model.loadedModules
+
+                    else
+                        effectiveModule model.loadedModules
+            in
+            ( { model
+                | effectiveModule = effective
+                , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
+                , showRawTriples = isRaw
+              }
+            , Cmd.none
+            )
+
         UserTogglesModuleSelection moduleId active ->
             --TODO: always regenerate visuals with currently loaded modules...
             if active then
@@ -303,7 +327,15 @@ view model =
           <|
             row columnStyles
                 [ column columnStyles
-                    [ text "Please input something."
+                    [ row neatRowStyles
+                        [ Input.checkbox [ centerY ]
+                            { onChange = UserTogglesRawMode
+                            , icon = Input.defaultCheckbox
+                            , checked = model.showRawTriples
+                            , label = Input.labelRight [] (text "Show raw triples")
+                            }
+                        ]
+                    , text "Please input something."
                     , Input.multiline [ height fill ]
                         { onChange = UserUpdatedContent
                         , text = model.contentEditArea

@@ -93,7 +93,6 @@ type alias Model =
     , screenRectangle : Rectangle2d Pixels SVGCoordinates
     , waitingForClickDelay : Bool
     , biggestBox : BoundingBox3d Meters WorldCoordinates
-    , rawTripleMode : Bool
     }
 
 
@@ -113,7 +112,6 @@ type Msg
     | ClickDelayExpired
     | UserClicksPlay
     | UserClicksPause
-    | UserTogglesRawTripleMode Bool
 
 
 init : ( Int, Int ) -> Model
@@ -142,7 +140,6 @@ init ( width, height ) =
             (Point2d.xy Quantity.zero (Pixels.pixels <| Basics.toFloat height))
     , waitingForClickDelay = False
     , biggestBox = BoundingBox3d.singleton Point3d.origin
-    , rawTripleMode = False
     }
 
 
@@ -312,9 +309,6 @@ update :
     -> ( Model, Maybe String )
 update msg aModule model =
     case msg of
-        UserTogglesRawTripleMode rawMode ->
-            ( { model | rawTripleMode = rawMode }, Nothing )
-
         UserClicksPlay ->
             ( { model | animation = True }, Nothing )
 
@@ -561,12 +555,6 @@ view wrapper model =
                     { label = text "Play"
                     , onPress = Just (wrapper UserClicksPlay)
                     }
-            , Input.checkbox [ centerY, alignRight ]
-                { onChange = wrapper << UserTogglesRawTripleMode
-                , icon = Input.defaultCheckbox
-                , checked = model.rawTripleMode
-                , label = Input.labelRight [] (text "Show raw triples")
-                }
             ]
         , Element.el
             [ htmlAttribute <| Mouse.onDown (wrapper << MouseDown)

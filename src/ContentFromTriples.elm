@@ -2,6 +2,7 @@ module ContentFromTriples exposing (..)
 
 import Dict exposing (..)
 import DomainModel exposing (..)
+import Murmur3 exposing (hashString)
 import Set exposing (..)
 import Types exposing (..)
 
@@ -18,6 +19,65 @@ type alias Indexes =
     { subjectRelationIndex : OuterDict -- facts about each subject
     , objectRelationIndex : OuterDict -- facts about each object
     , relationObjectIndex : OuterDict -- Surprisingly useful as gives us our type membership for free.
+    }
+
+
+rawFromTriples : Set Triple -> Module
+rawFromTriples triples =
+    let
+        nodeIds : Set NodeId
+        nodeIds =
+            Set.union
+                (triples |> Set.map (\( s, _, _ ) -> s))
+                (triples |> Set.map (\( _, _, o ) -> o))
+
+        nodes : Dict NodeId Node
+        nodes =
+            nodeIds
+                |> Set.toList
+                |> List.map (\id -> ( id, buildNode id ))
+                |> Dict.fromList
+
+        buildNode : NodeId -> Node
+        buildNode id =
+            --TODO: or implicit typing.
+            --Note we only surface one value for any attribute.
+            { id = id
+            , label = Nothing
+            , class = Nothing
+            , attributes = Dict.empty
+            }
+
+        links =
+            -- Links, in this new world, are explicit and we can find them by their "__FROM"
+            -- or we can just look for nodes that start with "__", which is clearer if less efficient.
+            triples
+                |> Set.toList
+                |> List.map buildLink
+                |> Dict.fromList
+
+        buildLink : Triple -> ( String, Link )
+        buildLink ( s, r, o ) =
+            let
+                id =
+                    String.fromInt <| Murmur3.hashString 2387 <| s ++ r ++ o
+            in
+            ( id
+            , { linkId = id
+              , fromNode = s
+              , toNode = o
+              , label = r
+              , class = Nothing
+              , attributes = Dict.empty
+              }
+            )
+    in
+    { id = "RAW"
+    , label = ""
+    , sourceFile = Nothing
+    , classes = Dict.empty
+    , nodes = nodes
+    , links = links
     }
 
 

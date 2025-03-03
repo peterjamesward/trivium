@@ -28,6 +28,7 @@ type alias FrontendModel =
     , selectedModules : Set ModuleId -- for UI enabling
     , loadedModules : Dict ModuleId (Set Triple) -- all selected triples live here.
     , standbyModules : Dict ModuleId (Set Triple) -- downloaded but de-selected.
+    , showRawTriples : Bool
     }
 
 
@@ -50,6 +51,7 @@ type FrontendMsg
     | Tick Time.Posix
     | UserClickedParse
     | UserTogglesModuleSelection ModuleId Bool
+    | UserTogglesRawMode Bool
 
 
 type ToBackend
