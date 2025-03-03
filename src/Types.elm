@@ -16,11 +16,9 @@ type alias FrontendModel =
     { key : Key
     , time : Time.Posix
     , message : String
-    , diagramList : List DiagramId -- full list of what is in the backend
     , moduleList : List ModuleId -- ditto
     , editingModule : Maybe Module -- being edited.
     , effectiveModule : Module -- what is seen on the graph view
-    , diagrams : Dict DiagramId Diagram -- got a copy locally.
     , contentEditArea : String -- place to enter and edit modules and diagrams
     , tokenizedInput : List Token -- live parsing and errors.
     , parseStatus : Result String (Set Triple)
@@ -29,20 +27,20 @@ type alias FrontendModel =
     , loadedModules : Dict ModuleId (Set Triple) -- all selected triples live here.
     , standbyModules : Dict ModuleId (Set Triple) -- downloaded but de-selected.
     , showRawTriples : Bool
+    , layoutList : List ModuleId -- a Layout essentially is a Module.
     }
 
 
 type alias BackendModel =
     { message : String
     , modules : Dict ModuleId (Set Triple)
-    , diagrams : Dict DiagramId Diagram
+    , layouts : Dict ModuleId (Set Triple)
     }
 
 
 type FrontendMsg
     = UrlClicked UrlRequest
     | UrlChanged Url
-    | UserSelectedDiagram DiagramId
     | UserUpdatedContent String
     | NoOpFrontendMsg
     | UserClickedSave
@@ -56,9 +54,6 @@ type FrontendMsg
 
 type ToBackend
     = NoOpToBackend
-    | DiagramChangedAtFront Diagram -- leaves some room for optimisation!
-    | AskForDiagramList
-    | AskForDiagram DiagramId
     | SaveModule String (Set Triple)
     | RequestModule ModuleId
     | RequestModuleList
@@ -71,7 +66,5 @@ type BackendMsg
 
 type ToFrontend
     = NoOpToFrontend
-    | DiagramList (List DiagramId)
-    | DiagramContent Diagram -- sub-optimal, may want to know clientId to avoid feedback loop.
     | ModuleList (List ModuleId)
     | ModuleContent ModuleId (Set Triple)

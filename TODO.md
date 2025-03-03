@@ -1,17 +1,17 @@
 
 # WIP
 
-- Ability to add Layout instead of Module.
-- Allow selection of one Layout for editing.
+- Are direction fields working properly?
+
 - Add Inspector pane.
 - Optimise repulsive forces with octree.
 
-- Use 3 dimensions for raw triples graph.
+- Use 3 dimensions for raw triples graph. (On what basis, I know not.)
 
 - Option to curve link (maybe a spline).
 - When adding content, preserve current positions?
 - Maybe add random force (diminishing).
-- Highlight yellow when waiting for a module to download.
+- Highlight yellow in list when waiting for a module to download.
 
 - Tidy the UI.
 - Make SVG labels clearer with background and border (or similar).

@@ -132,15 +132,6 @@ emptyModule =
     }
 
 
-type alias Diagram =
-    -- A diagram contains styles and style bindings.
-    -- Not sure if we _derive_ this from a Module, or what...
-    { id : DiagramId
-    , bindings : Dict ClassId StyleId
-    , styles : Dict StyleId Style
-    }
-
-
 preferredLinkDirection : Module -> Link -> Maybe (Direction3d WorldCoordinates)
 preferredLinkDirection content link =
     --TODO: Use any bound Style if no direction on the class.

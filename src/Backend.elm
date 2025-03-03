@@ -23,7 +23,7 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { message = "Hello!"
       , modules = Dict.empty
-      , diagrams = Dict.empty
+      , layouts = Dict.empty
       }
     , Cmd.none
     )
@@ -68,26 +68,6 @@ updateFromFrontend sessionId clientId msg model =
 
         NoOpToBackend ->
             ( model, Cmd.none )
-
-        DiagramChangedAtFront diagram ->
-            ( model
-            , Cmd.none
-            )
-
-        AskForDiagramList ->
-            ( model
-            , Lamdera.sendToFrontend clientId (DiagramList <| Dict.keys model.diagrams)
-            )
-
-        AskForDiagram diagramId ->
-            ( model
-            , case Dict.get diagramId model.diagrams of
-                Just diagram ->
-                    Lamdera.sendToFrontend clientId (DiagramContent diagram)
-
-                Nothing ->
-                    Cmd.none
-            )
 
 
 subscriptions : Model -> Sub BackendMsg

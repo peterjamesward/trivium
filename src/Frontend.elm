@@ -45,11 +45,10 @@ init url key =
     ( { key = key
       , time = Time.millisToPosix 0
       , message = ""
-      , diagramList = []
+      , layoutList = []
       , moduleList = []
       , editingModule = Nothing
       , effectiveModule = DomainModel.emptyModule
-      , diagrams = Dict.empty
       , contentEditArea = ""
       , tokenizedInput = []
       , parseStatus = Err "nothing to parse"
@@ -214,9 +213,6 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        UserSelectedDiagram id ->
-            ( model, Lamdera.sendToBackend (AskForDiagram id) )
-
         UrlClicked urlRequest ->
             case urlRequest of
                 Internal url ->
@@ -273,16 +269,6 @@ updateFromBackend msg model =
     case msg of
         NoOpToFrontend ->
             ( model, Cmd.none )
-
-        DiagramContent diagram ->
-            ( model
-            , Cmd.none
-            )
-
-        DiagramList diagramIds ->
-            ( { model | diagramList = diagramIds }
-            , Cmd.none
-            )
 
         ModuleList moduleIds ->
             ( { model | moduleList = moduleIds }

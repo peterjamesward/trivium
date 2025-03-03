@@ -151,6 +151,8 @@ computeInitialPositions content model =
     -- Must make sure that parallel links are separated at the start, so the repulsion works.
     -- Do this by treating the virtual nodes (link midpoints) the same as real nodes.
     let
+        -- Experimentally, preserve positions from prior state.
+        -- Use default positions only for new nodes and links.
         pointWrap pt label =
             { position3d = pt
             , positionSvg = Point2d.origin
@@ -190,8 +192,12 @@ computeInitialPositions content model =
             -- both string ids really
             Dict.union nodePositions linkPositions
 
+        mergeNewAndOldPositions =
+            -- Will be amazing if this is all it takes!
+            Dict.intersect (Dict.union model.positions linksAndNodes) linksAndNodes
+
         modelWithInitialPositions =
-            { model | positions = mapToSvg model linksAndNodes }
+            { model | positions = mapToSvg model mergeNewAndOldPositions }
     in
     makeMeshFromCurrentPositions content modelWithInitialPositions
 
