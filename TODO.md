@@ -2,14 +2,13 @@
 # WIP
 
 - Are direction fields working properly?
+- Display grid on ground place.
+- Option to curve link (maybe a spline).
 
 - Add Inspector pane.
 - Optimise repulsive forces with octree.
 
 - Use 3 dimensions for raw triples graph. (On what basis, I know not.)
-
-- Option to curve link (maybe a spline).
-- When adding content, preserve current positions?
 - Maybe add random force (diminishing).
 - Highlight yellow in list when waiting for a module to download.
 
