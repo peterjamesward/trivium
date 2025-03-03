@@ -1,20 +1,20 @@
 
 # WIP
 
-- Styling - binding a Style to a type (but no additional syntax required).
-- Option to curve link (maybe a spline).
-
 - Ability to add Layout instead of Module.
 - Allow selection of one Layout for editing.
 - Add Inspector pane.
 - Optimise repulsive forces with octree.
 
+- Use 3 dimensions for raw triples graph.
+
+- Option to curve link (maybe a spline).
 - When adding content, preserve current positions?
 - Maybe add random force (diminishing).
 - Highlight yellow when waiting for a module to download.
 
 - Tidy the UI.
-- Make labels clearer with background and border (or similar).
+- Make SVG labels clearer with background and border (or similar).
 - Make multiple tabs in main window (input | output).
 
 - Report lex and parse errors with line and column.
