@@ -1,9 +1,6 @@
 
 # WIP
 
-- Are direction fields working properly? Yes but needs damping!
-
-- Display grid instead of ground plane.
 - Option to curve link (maybe a spline).
 
 - Add Inspector pane.

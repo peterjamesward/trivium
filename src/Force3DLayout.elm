@@ -26,6 +26,7 @@ import Html.Events.Extra.Mouse as Mouse exposing (Button(..))
 import Html.Events.Extra.Wheel as Wheel
 import Json.Decode as Decode
 import Length exposing (Meters)
+import LineSegment3d exposing (..)
 import List.Extra
 import Maybe.Extra
 import Pixels exposing (..)
@@ -308,6 +309,30 @@ makeMeshFromCurrentPositions aModule model =
     { model | scene = nodeMesh ++ linkMesh }
 
 
+groundPlane : List (Entity WorldCoordinates)
+groundPlane =
+    let
+        ( start, end ) =
+            ( -1000, 1000 )
+
+        drawHorizAndVert d =
+            [ Scene3d.lineSegment
+                (Material.color Color.lightGrey)
+                (LineSegment3d.from
+                    (Point3d.meters start (d * 10) 0)
+                    (Point3d.meters end (d * 10) 0)
+                )
+            , Scene3d.lineSegment
+                (Material.color Color.lightGrey)
+                (LineSegment3d.from
+                    (Point3d.meters (d * 10) start 0)
+                    (Point3d.meters (d * 10) end 0)
+                )
+            ]
+    in
+    List.range -100 100 |> List.concatMap (Basics.toFloat >> drawHorizAndVert)
+
+
 update :
     Msg
     -> Module
@@ -581,8 +606,8 @@ view wrapper model =
                     { camera = camera
                     , clipDepth = Length.meters 0.1
                     , dimensions = ( Quantity.round w, Quantity.round h )
-                    , background = Scene3d.backgroundColor Color.lightGrey
-                    , entities = model.scene
+                    , background = Scene3d.transparentBackground
+                    , entities = groundPlane ++ model.scene
                     , shadows = True
                     , sunlightDirection = Direction3d.xyZ (Angle.degrees 45) (Angle.degrees 70)
                     , upDirection = Direction3d.positiveZ
