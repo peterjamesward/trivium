@@ -119,7 +119,7 @@ init ( width, height ) =
     { -- Layout.
       repulsion = 1.0
     , tension = 1.0
-    , fieldStrength = 0.2
+    , fieldStrength = 1.0
     , gravitationalConstant = 0.01
     , timeDelta = 0.1
     , positions = Dict.empty
@@ -128,7 +128,7 @@ init ( width, height ) =
     , animation = False
 
     -- Rendering.
-    , azimuth = Angle.degrees 0
+    , azimuth = Angle.degrees -90
     , elevation = Angle.degrees 90
     , scene = []
     , zoomLevel = 0.0
@@ -770,20 +770,33 @@ applyForces theModule model =
                             -- the force by the angle between directions, becoming zero if
                             -- they align, so we don't test for that case.
                             let
-                                endIfAligned =
-                                    -- WHere's the ideal endpoint? Need this to define a plane.
-                                    Point3d.translateIn desiredDirection Length.meter subject.position3d
+                                midpoint =
+                                    Point3d.midpoint subject.position3d object.position3d
 
-                                currentVector =
-                                    Vector3d.from subject.position3d object.position3d
+                                ( midToStart, midToEnd, startToEnd ) =
+                                    ( Vector3d.from midpoint subject.position3d
+                                    , Vector3d.from midpoint object.position3d
+                                    , Vector3d.from subject.position3d object.position3d
+                                    )
+
+                                ( idealStart, idealEnd ) =
+                                    ( Point3d.translateIn
+                                        (Direction3d.reverse desiredDirection)
+                                        (Vector3d.length midToStart)
+                                        midpoint
+                                    , Point3d.translateIn
+                                        desiredDirection
+                                        (Vector3d.length midToEnd)
+                                        midpoint
+                                    )
 
                                 correctiveForceAtStart : Vector3d Meters WorldCoordinates
                                 correctiveForceAtStart =
-                                    case
-                                        ( Plane3d.throughPoints subject.position3d object.position3d endIfAligned
-                                        , Vector3d.direction currentVector
+                                    (case
+                                        ( Plane3d.throughPoints subject.position3d object.position3d idealEnd
+                                        , Vector3d.direction startToEnd
                                         )
-                                    of
+                                     of
                                         ( Just commonPlane, Just currentDirection ) ->
                                             -- We can now find the normal
                                             let
@@ -793,18 +806,17 @@ applyForces theModule model =
                                                 rotation =
                                                     Direction3d.angleFrom currentDirection desiredDirection
                                             in
-                                            currentVector
+                                            midToStart
                                                 |> Vector3d.rotateAround planeNormalAxis (Angle.degrees 90)
-                                                |> Vector3d.scaleTo (Length.meters <| Angle.inTurns rotation)
-                                                |> Vector3d.multiplyBy model.fieldStrength
 
                                         _ ->
-                                            currentVector
-                                                |> Vector3d.perpendicularTo
-                                                |> Vector3d.scaleTo Length.meter
-                                                |> Vector3d.multiplyBy model.fieldStrength
+                                            midToStart |> Vector3d.perpendicularTo
+                                    )
+                                        |> Vector3d.scaleTo (Point3d.distanceFrom subject.position3d idealStart)
+                                        |> Vector3d.multiplyBy model.fieldStrength
 
                                 correctiveForceAEnd =
+                                    -- Short cut here.
                                     Vector3d.reverse correctiveForceAtStart
                             in
                             collector
