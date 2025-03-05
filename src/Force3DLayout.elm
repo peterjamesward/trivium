@@ -287,21 +287,57 @@ makeMeshFromCurrentPositions aModule model =
                 polylineFromSpline : Polyline3d Meters WorldCoordinates
                 polylineFromSpline =
                     CubicSpline3d.approximate
-                        (Length.meters <| 1.0 * tolerance)
+                        (Length.meters <| 0.5 * tolerance)
                         spline
-            in
-            (LineSegment3d.from from.position3d controls.b1
-                :: Polyline3d.segments polylineFromSpline
-                ++ [ LineSegment3d.from controls.b2 to.position3d ]
-            )
-                |> List.filterMap
-                    (\segment ->
-                        Cylinder3d.from
-                            (LineSegment3d.startPoint segment)
-                            (LineSegment3d.endPoint segment)
-                            (Length.meters 1)
+
+                cone1 =
+                    case Direction3d.from from.position3d controls.b1 of
+                        Just direction ->
+                            [ Cone3d.startingAt
+                                controls.b1
+                                direction
+                                { radius = Length.meters 2
+                                , length = Length.meters 10
+                                }
+                                |> Cone3d.translateIn
+                                    direction
+                                    (Length.meters -10)
+                                |> Scene3d.cone (Material.color style.colour)
+                            ]
+
+                        Nothing ->
+                            []
+
+                cone2 =
+                    case Direction3d.from controls.b2 to.position3d of
+                        Just direction ->
+                            [ Cone3d.startingAt
+                                controls.b2
+                                direction
+                                { radius = Length.meters 2
+                                , length = Length.meters 10
+                                }
+                                |> Scene3d.cone (Material.color style.colour)
+                            ]
+
+                        Nothing ->
+                            []
+
+                segments =
+                    (LineSegment3d.from from.position3d controls.b1
+                        :: Polyline3d.segments polylineFromSpline
+                        ++ [ LineSegment3d.from controls.b2 to.position3d ]
                     )
-                |> List.map (Scene3d.cylinder (Material.color style.colour))
+                        |> List.filterMap
+                            (\segment ->
+                                Cylinder3d.from
+                                    (LineSegment3d.startPoint segment)
+                                    (LineSegment3d.endPoint segment)
+                                    (Length.meters 1)
+                            )
+                        |> List.map (Scene3d.cylinder (Material.color style.colour))
+            in
+            cone1 ++ cone2 ++ segments
 
         meshForLinkWithMidpoint : Position -> Position -> Position -> Style -> List (Entity WorldCoordinates)
         meshForLinkWithMidpoint from mid to style =

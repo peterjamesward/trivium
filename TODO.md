@@ -2,7 +2,7 @@
 # WIP
 
 - Add Inspector pane.
-- Mouse over to show all attrubites in SVG?
+- Mouse over to show all attributes in SVG for nodes and links?
 - Optimise repulsive forces with octree.
 
 - Use 3 dimensions for raw triples graph. (On what basis, I know not.)
