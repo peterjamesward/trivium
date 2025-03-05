@@ -1,9 +1,8 @@
 
 # WIP
 
-- Option to curve link (maybe a spline).
-
 - Add Inspector pane.
+- Mouse over to show all attrubites in SVG?
 - Optimise repulsive forces with octree.
 
 - Use 3 dimensions for raw triples graph. (On what basis, I know not.)

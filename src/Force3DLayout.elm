@@ -11,6 +11,7 @@ import Circle3d exposing (..)
 import Color
 import CommonUiElements exposing (..)
 import Cone3d
+import CubicSpline3d exposing (..)
 import Cylinder3d
 import Dict exposing (Dict)
 import Direction2d exposing (..)
@@ -34,7 +35,7 @@ import Plane3d exposing (..)
 import Point2d exposing (..)
 import Point3d exposing (..)
 import Point3d.Projection
-import Polyline3d
+import Polyline3d exposing (..)
 import Quantity
 import Rectangle2d exposing (..)
 import Scene3d exposing (..)
@@ -259,52 +260,100 @@ makeMeshFromCurrentPositions aModule model =
                 |> Dict.values
                 |> List.filterMap identity
 
+        linkMeshWithSplines : Position -> Position -> Position -> Style -> List (Entity WorldCoordinates)
+        linkMeshWithSplines from mid to style =
+            --TODO: WIP: Use a spline with midpoint as a control point.
+            let
+                tolerance =
+                    1.0
+
+                controls =
+                    { b1 = Point3d.midpoint from.position3d mid.position3d
+                    , c1 = mid.position3d
+                    , a2 = mid.position3d
+                    , b2 = Point3d.midpoint mid.position3d to.position3d
+                    }
+
+                spline : CubicSpline3d Meters WorldCoordinates
+                spline =
+                    -- From previous road start to end, using control points
+                    -- from adjacent edges.
+                    CubicSpline3d.fromControlPoints
+                        controls.b1
+                        controls.c1
+                        controls.a2
+                        controls.b2
+
+                polylineFromSpline : Polyline3d Meters WorldCoordinates
+                polylineFromSpline =
+                    CubicSpline3d.approximate
+                        (Length.meters <| 1.0 * tolerance)
+                        spline
+            in
+            (LineSegment3d.from from.position3d controls.b1
+                :: Polyline3d.segments polylineFromSpline
+                ++ [ LineSegment3d.from controls.b2 to.position3d ]
+            )
+                |> List.filterMap
+                    (\segment ->
+                        Cylinder3d.from
+                            (LineSegment3d.startPoint segment)
+                            (LineSegment3d.endPoint segment)
+                            (Length.meters 1)
+                    )
+                |> List.map (Scene3d.cylinder (Material.color style.colour))
+
+        meshForLinkWithMidpoint : Position -> Position -> Position -> Style -> List (Entity WorldCoordinates)
+        meshForLinkWithMidpoint from mid to style =
+            -- This uses the midpoint as a simple hinge, at which we attach a directional cone.
+            let
+                direction =
+                    Direction3d.from from.position3d to.position3d
+                        |> Maybe.withDefault Direction3d.positiveZ
+
+                cone =
+                    Cone3d.startingAt
+                        mid.position3d
+                        direction
+                        { radius = Length.meters 2
+                        , length = Length.meters 10
+                        }
+
+                shiftedCone =
+                    cone |> Cone3d.translateIn direction (Length.meters -5)
+            in
+            Scene3d.cone (Material.color style.colour) shiftedCone
+                :: ([ Cylinder3d.from from.position3d mid.position3d (Length.meters 1)
+                    , Cylinder3d.from mid.position3d to.position3d (Length.meters 1)
+                    ]
+                        |> List.filterMap identity
+                        |> List.map (Scene3d.cylinder (Material.color style.colour))
+                   )
+
+        linkWithTwoHalves : Link -> List (Entity WorldCoordinates)
+        linkWithTwoHalves link =
+            let
+                style =
+                    -- Debug.log "STYLE" <|
+                    DomainModel.linkStyle aModule link
+            in
+            case
+                ( Dict.get link.fromNode model.positions
+                , Dict.get link.linkId model.positions
+                , Dict.get link.toNode model.positions
+                )
+            of
+                ( Just from, Just mid, Just to ) ->
+                    linkMeshWithSplines from mid to style
+
+                _ ->
+                    []
+
         linkMesh =
-            -- NOTE: The linkId acts like a virtual node in the positions dict.
-            --TODO: Styling.
+            -- The linkId acts like a virtual node in the positions dict.
             aModule.links
                 |> Dict.values
-                |> List.concatMap
-                    (\link ->
-                        let
-                            style =
-                                -- Debug.log "STYLE" <|
-                                DomainModel.linkStyle aModule link
-                        in
-                        case
-                            ( Dict.get link.fromNode model.positions
-                            , Dict.get link.linkId model.positions
-                            , Dict.get link.toNode model.positions
-                            )
-                        of
-                            ( Just from, Just mid, Just to ) ->
-                                let
-                                    direction =
-                                        Direction3d.from from.position3d to.position3d
-                                            |> Maybe.withDefault Direction3d.positiveZ
-
-                                    cone =
-                                        Cone3d.startingAt
-                                            mid.position3d
-                                            direction
-                                            { radius = Length.meters 2
-                                            , length = Length.meters 10
-                                            }
-
-                                    shiftedCone =
-                                        cone |> Cone3d.translateIn direction (Length.meters -5)
-                                in
-                                Scene3d.cone (Material.color style.colour) shiftedCone
-                                    :: ([ Cylinder3d.from from.position3d mid.position3d (Length.meters 1)
-                                        , Cylinder3d.from mid.position3d to.position3d (Length.meters 1)
-                                        ]
-                                            |> List.filterMap identity
-                                            |> List.map (Scene3d.cylinder (Material.color style.colour))
-                                       )
-
-                            _ ->
-                                []
-                    )
+                |> List.concatMap linkWithTwoHalves
     in
     { model | scene = nodeMesh ++ linkMesh }
 
