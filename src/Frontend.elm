@@ -16,6 +16,7 @@ import Html
 import Html.Attributes as Attr
 import Lamdera
 import Lexer exposing (..)
+import Maybe.Extra exposing (join)
 import Parser exposing (..)
 import Set exposing (..)
 import Time exposing (..)
@@ -169,7 +170,8 @@ update msg model =
             in
             ( { model
                 | visual3d = newVisual
-                , inspectedItem = nearestItem
+                , inspectedItem =
+                    nearestItem |> Maybe.Extra.orElse model.inspectedItem
               }
             , Cmd.none
             )
