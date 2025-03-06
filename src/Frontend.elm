@@ -57,6 +57,7 @@ init url key =
       , loadedModules = Dict.empty
       , standbyModules = Dict.empty
       , showRawTriples = False
+      , inspectedItem = Nothing
       }
     , Lamdera.sendToBackend RequestModuleList
     )
@@ -163,10 +164,13 @@ update msg model =
 
         Force3DMsg forceMsg ->
             let
-                ( newVisual, ignoreClick ) =
+                ( newVisual, nearestItem ) =
                     Force3DLayout.update forceMsg model.effectiveModule model.visual3d
             in
-            ( { model | visual3d = newVisual }
+            ( { model
+                | visual3d = newVisual
+                , inspectedItem = nearestItem
+              }
             , Cmd.none
             )
 
@@ -347,11 +351,31 @@ view model =
                     ]
                 , Force3DLayout.view Force3DMsg model.visual3d
                 , column columnStyles
-                    [ modulesTable model.moduleList model.selectedModules
+                    [ inspector model
+                    , modulesTable model.moduleList model.selectedModules
                     ]
                 ]
         ]
     }
+
+
+inspector : Model -> Element FrontendMsg
+inspector model =
+    -- reveal information about item under mouse or clicked on (this will come out in the wash)
+    case model.inspectedItem of
+        Just anItem ->
+            case ( Dict.get anItem model.effectiveModule.nodes, Dict.get anItem model.effectiveModule.links ) of
+                ( Just node, _ ) ->
+                    text node.id
+
+                ( _, Just link ) ->
+                    text link.linkId
+
+                _ ->
+                    text "What is that?"
+
+        Nothing ->
+            text "Nothing selected"
 
 
 modulesTable :

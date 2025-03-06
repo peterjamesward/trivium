@@ -15,6 +15,10 @@ type SVGCoordinates
     = SVGCoordinates
 
 
+type ClientCoordinates
+    = ClientCoordinates
+
+
 type alias Triple =
     ( String, String, String )
 

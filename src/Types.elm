@@ -28,6 +28,7 @@ type alias FrontendModel =
     , standbyModules : Dict ModuleId (Set Triple) -- downloaded but de-selected.
     , showRawTriples : Bool
     , layoutList : List ModuleId -- a Layout essentially is a Module.
+    , inspectedItem : Maybe NodeId -- (could be Node or Link, really)
     }
 
 
