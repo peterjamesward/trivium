@@ -58,6 +58,10 @@ type alias PositionSVG =
     Point2d Pixels SVGCoordinates
 
 
+type alias PositionClient =
+    Point2d Pixels ClientCoordinates
+
+
 type DragAction
     = DragNone
     | DragRotate ( Float, Float )
@@ -68,6 +72,7 @@ type alias Position =
     { -- Use one structure for all our internal purposes.
       position3d : Position3d
     , positionSvg : PositionSVG
+    , positionClient : PositionClient
     , label : String
     , force : Vector3d Meters WorldCoordinates
     }
@@ -158,6 +163,7 @@ computeInitialPositions content model =
         pointWrap pt label =
             { position3d = pt
             , positionSvg = Point2d.origin
+            , positionClient = Point2d.origin
             , label = label
             , force = Vector3d.zero
             }
@@ -587,7 +593,8 @@ update msg aModule model =
                             ( model, Nothing )
 
                 _ ->
-                    ( model, Nothing )
+                    -- Need to return item id if close to mouse.
+                    ( model, findItemNearest newx newy model.positions )
 
         MouseWheel delta ->
             let
@@ -630,6 +637,33 @@ onContextMenu msg =
             }
         )
         |> htmlAttribute
+
+
+findItemNearest : Float -> Float -> Dict String Position -> Maybe NodeId
+findItemNearest x y positions =
+    -- See if unindexed search is good enough for now.
+    -- N.B. I'm not sure if the SVG coords are same as mouse coords!
+    -- Module could be empty, hence the Maybe.
+    let
+        search =
+            Point2d.pixels x y
+
+        ( closest, closestDistance ) =
+            Dict.foldl isCloser ( Nothing, Pixels.pixels 9999 ) positions
+
+        -- isCloser :
+        --     id
+        --     -> Position
+        --     -> ( Maybe String, Pixels )
+        --     -> ( Maybe String, Pixels )
+        isCloser id position ( bestId, bestDistance ) =
+            if Point2d.distanceFrom search position.positionClient |> Quantity.lessThan bestDistance then
+                ( Just id, Point2d.distanceFrom search position.positionClient )
+
+            else
+                ( bestId, bestDistance )
+    in
+    closest
 
 
 view :
@@ -1008,6 +1042,11 @@ mapToSvg model coords3d =
                     Point3d.Projection.toScreenSpace
                         camera
                         useThisRectangleForSVG
+                        has3d.position3d
+                , positionClient =
+                    Point3d.Projection.toScreenSpace
+                        camera
+                        useThisRectangleForWebGL
                         has3d.position3d
             }
     in
