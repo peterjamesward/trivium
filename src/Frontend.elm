@@ -355,10 +355,31 @@ view model =
                 , column columnStyles
                     [ inspector model
                     , modulesTable model.moduleList model.selectedModules
+                    [ inspector model
+                    , modulesTable model.moduleList model.selectedModules
                     ]
                 ]
         ]
     }
+
+
+inspector : Model -> Element FrontendMsg
+inspector model =
+    -- reveal information about item under mouse or clicked on (this will come out in the wash)
+    case model.inspectedItem of
+        Just anItem ->
+            case ( Dict.get anItem model.effectiveModule.nodes, Dict.get anItem model.effectiveModule.links ) of
+                ( Just node, _ ) ->
+                    text node.id
+
+                ( _, Just link ) ->
+                    text link.linkId
+
+                _ ->
+                    text "What is that?"
+
+        Nothing ->
+            text "Nothing selected"
 
 
 inspector : Model -> Element FrontendMsg
