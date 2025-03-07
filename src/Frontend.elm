@@ -385,11 +385,11 @@ inspector model =
                         , columns =
                             [ { header = none
                               , width = fillPortion 1
-                              , view = \( k, v ) -> text k
+                              , view = \( k, v ) -> el [ padding 2 ] <| text k
                               }
                             , { header = none
                               , width = fillPortion 4
-                              , view = \( k, v ) -> text <| String.join ", " <| Set.toList v
+                              , view = \( k, v ) -> el [ padding 2 ] <| text <| String.join ", " <| Set.toList v
                               }
                             ]
                         }
@@ -400,13 +400,13 @@ inspector model =
             case ( Dict.get anItem model.effectiveModule.nodes, Dict.get anItem model.effectiveModule.links ) of
                 ( Just node, _ ) ->
                     column columnStyles
-                        [ text node.id
+                        [ el [ Font.bold, padding 2 ] <| text node.id
                         , attributeTable node.attributes
                         ]
 
                 ( _, Just link ) ->
                     column columnStyles
-                        [ text link.linkId
+                        [ el [ Font.bold, padding 2 ] <| text link.linkId
                         , attributeTable link.attributes
                         ]
 

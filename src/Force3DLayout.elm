@@ -636,7 +636,8 @@ update msg aModule model =
                             findItemNearest newx newy model.positions
                     in
                     ( { model | nearest = nearest }
-                    , nearest
+                    , Nothing
+                      --Don't return until clicked (nearest)
                     )
 
         MouseWheel delta ->
@@ -667,7 +668,7 @@ update msg aModule model =
 
         UserClick event ->
             -- Just <| findNearestLabel event.offsetPos model.labelsAndLocations )
-            ( model, Nothing )
+            ( model, model.nearest )
 
 
 onContextMenu : a -> Element.Attribute a
