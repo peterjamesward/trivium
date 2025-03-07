@@ -75,6 +75,7 @@ type alias Position =
     , positionClient : PositionClient
     , label : String
     , force : Vector3d Meters WorldCoordinates
+    , attributes : Dict String (Set String) -- keep reference here so we can create better SVG.
     }
 
 
@@ -100,6 +101,7 @@ type alias Model =
     , screenRectangle : Rectangle2d Pixels SVGCoordinates
     , waitingForClickDelay : Bool
     , biggestBox : BoundingBox3d Meters WorldCoordinates
+    , nearest : Maybe NodeId
     }
 
 
@@ -147,6 +149,7 @@ init ( width, height ) =
             (Point2d.xy Quantity.zero (Pixels.pixels <| Basics.toFloat height))
     , waitingForClickDelay = False
     , biggestBox = BoundingBox3d.singleton Point3d.origin
+    , nearest = Nothing
     }
 
 
@@ -166,6 +169,16 @@ computeInitialPositions content model =
             , positionClient = Point2d.origin
             , label = label
             , force = Vector3d.zero
+            , attributes = Dict.empty
+            }
+
+        emptyPosition =
+            { position3d = Point3d.origin
+            , positionSvg = Point2d.origin
+            , positionClient = Point2d.origin
+            , label = ""
+            , force = Vector3d.zero
+            , attributes = Dict.empty
             }
 
         nodeCircle : List (Point3d Meters WorldCoordinates)
@@ -179,21 +192,45 @@ computeInitialPositions content model =
         nodePositions : Dict NodeId Position
         nodePositions =
             content.nodes
-                |> Dict.map (\id node -> ( id, Maybe.withDefault id node.label ))
+                |> Dict.map
+                    (\id node ->
+                        ( id
+                        , { emptyPosition
+                            | label = Maybe.withDefault id node.label
+                            , attributes = node.attributes
+                          }
+                        )
+                    )
                 |> Dict.values
                 |> List.Extra.zip (List.take (Dict.size content.nodes) nodeCircle)
                 |> List.map
-                    (\( pos, ( id, label ) ) -> ( id, pointWrap pos label ))
+                    (\( pos, ( id, position ) ) ->
+                        ( id
+                        , { position | position3d = pos }
+                        )
+                    )
                 |> Dict.fromList
 
         linkPositions : Dict LinkId Position
         linkPositions =
             content.links
-                |> Dict.map (\id link -> ( id, link.label ))
+                |> Dict.map
+                    (\id link ->
+                        ( id
+                        , { emptyPosition
+                            | label = link.label
+                            , attributes = link.attributes
+                          }
+                        )
+                    )
                 |> Dict.values
                 |> List.Extra.zip (List.drop (Dict.size content.nodes) nodeCircle)
                 |> List.map
-                    (\( pos, ( id, label ) ) -> ( id, pointWrap pos label ))
+                    (\( pos, ( id, position ) ) ->
+                        ( id
+                        , { position | position3d = pos }
+                        )
+                    )
                 |> Dict.fromList
 
         linksAndNodes =
@@ -594,7 +631,13 @@ update msg aModule model =
 
                 _ ->
                     -- Need to return item id if close to mouse.
-                    ( model, findItemNearest newx newy model.positions )
+                    let
+                        nearest =
+                            findItemNearest newx newy model.positions
+                    in
+                    ( { model | nearest = nearest }
+                    , nearest
+                    )
 
         MouseWheel delta ->
             let
@@ -1108,25 +1151,34 @@ textOverlay model =
             , Svg.Attributes.y (String.fromFloat (Pixels.toFloat (Point2d.yCoordinate atPoint) + 6))
             ]
 
-        -- Create an SVG label at each place
+        -- Create an SVG label at each place.
+        -- If "nearest" make it more of a feature. Show atttributes.
         nodeLabels =
             model.positions
                 |> Dict.map
                     (\id position ->
-                        Svg.text_
-                            (textAttributes position.positionSvg)
-                            [ Svg.text position.label ]
-                            -- Hack: flip the text upside down since our later
-                            -- 'Svg.relativeTo topLeftFrame' call will flip it
-                            -- back right side up
-                            |> Svg.mirrorAcross
-                                (Axis2d.through
-                                    position.positionSvg
-                                    Direction2d.x
-                                )
+                        if Just id == model.nearest then
+                            showWithAttributes position
+                                |> Svg.mirrorAcross
+                                    (Axis2d.through position.positionSvg Direction2d.x)
+
+                        else
+                            Svg.text_
+                                (textAttributes position.positionSvg)
+                                [ Svg.text position.label ]
+                                -- Hack: flip the text upside down since our later
+                                -- 'Svg.relativeTo topLeftFrame' call will flip it
+                                -- back right side up
+                                |> Svg.mirrorAcross
+                                    (Axis2d.through position.positionSvg Direction2d.x)
                     )
                 |> Dict.values
                 |> Svg.g []
+
+        showWithAttributes position =
+            Svg.text_
+                (textAttributes position.positionSvg)
+                [ Svg.text position.label ]
     in
     let
         topLeftFrame =

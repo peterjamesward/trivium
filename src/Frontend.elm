@@ -355,8 +355,6 @@ view model =
                 , column columnStyles
                     [ inspector model
                     , modulesTable model.moduleList model.selectedModules
-                    [ inspector model
-                    , modulesTable model.moduleList model.selectedModules
                     ]
                 ]
         ]
@@ -366,33 +364,51 @@ view model =
 inspector : Model -> Element FrontendMsg
 inspector model =
     -- reveal information about item under mouse or clicked on (this will come out in the wash)
+    let
+        headerAttrs =
+            [ Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 } ]
+
+        attributeTable : InnerDict -> Element FrontendMsg
+        attributeTable attributes =
+            column columnStyles
+                [ row [ width fill ]
+                    [ el ((width <| fillPortion 1) :: headerAttrs) <| text "Key"
+                    , el ((width <| fillPortion 4) :: headerAttrs) <| text "Value"
+                    ]
+                , el [ width fill ] <|
+                    table
+                        [ width fill
+                        , scrollbarY
+                        , spacing 1
+                        ]
+                        { data = Dict.toList attributes
+                        , columns =
+                            [ { header = none
+                              , width = fillPortion 1
+                              , view = \( k, v ) -> text k
+                              }
+                            , { header = none
+                              , width = fillPortion 4
+                              , view = \( k, v ) -> text <| String.join ", " <| Set.toList v
+                              }
+                            ]
+                        }
+                ]
+    in
     case model.inspectedItem of
         Just anItem ->
             case ( Dict.get anItem model.effectiveModule.nodes, Dict.get anItem model.effectiveModule.links ) of
                 ( Just node, _ ) ->
-                    text node.id
+                    column columnStyles
+                        [ text node.id
+                        , attributeTable node.attributes
+                        ]
 
                 ( _, Just link ) ->
-                    text link.linkId
-
-                _ ->
-                    text "What is that?"
-
-        Nothing ->
-            text "Nothing selected"
-
-
-inspector : Model -> Element FrontendMsg
-inspector model =
-    -- reveal information about item under mouse or clicked on (this will come out in the wash)
-    case model.inspectedItem of
-        Just anItem ->
-            case ( Dict.get anItem model.effectiveModule.nodes, Dict.get anItem model.effectiveModule.links ) of
-                ( Just node, _ ) ->
-                    text node.id
-
-                ( _, Just link ) ->
-                    text link.linkId
+                    column columnStyles
+                        [ text link.linkId
+                        , attributeTable link.attributes
+                        ]
 
                 _ ->
                     text "What is that?"
