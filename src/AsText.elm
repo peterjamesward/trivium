@@ -1,4 +1,4 @@
-module AsText exposing (moduleToText)
+module AsText exposing (attributesToText, moduleToText, nodeToText)
 
 import Dict exposing (..)
 import DomainModel exposing (..)
@@ -65,6 +65,16 @@ withClasses classes =
 
 withNodes : Dict NodeId Node -> String
 withNodes nodes =
+    nodes
+        |> Dict.filter (\id _ -> id /= "Module")
+        |> Dict.values
+        |> List.filterMap nodeToText
+        |> String.join """"""
+
+
+attributesToText : InnerDict -> List String
+attributesToText attrs =
+    --TODO: Should be able to use this in SVG land.
     let
         attribute : String -> Set String -> String
         attribute relation objects =
@@ -76,8 +86,31 @@ withNodes nodes =
     """
                 ]
 
-        phrases : Node -> String
-        phrases node =
+        phrases : List String
+        phrases =
+            attrs
+                |> Dict.map attribute
+                |> Dict.values
+    in
+    -- Debug.log "ATTRS"
+    phrases
+
+
+nodeToText : Node -> Maybe String
+nodeToText node =
+    let
+        attribute : String -> Set String -> String
+        attribute relation objects =
+            String.concat
+                [ " "
+                , relation
+                , " "
+                , objects |> Set.toList |> String.join """, 
+    """
+                ]
+
+        phrases : String
+        phrases =
             (([ Maybe.map (\class -> " is " ++ class) node.class
               , Maybe.map (\label -> " label " ++ label) node.label
               ]
@@ -88,25 +121,18 @@ withNodes nodes =
                 |> String.join """;
 """
     in
-    nodes
-        |> Dict.filter (\id _ -> id /= "Module")
-        |> Dict.values
-        |> List.filterMap
-            (\node ->
-                -- Elide nodes with nothing useful to say.
-                case phrases node of
-                    "" ->
-                        Nothing
+    -- Elide nodes with nothing useful to say.
+    case phrases of
+        "" ->
+            Nothing
 
-                    somePhrases ->
-                        Just <|
-                            """
+        somePhrases ->
+            Just <|
+                """
 """
-                                ++ node.id
-                                ++ somePhrases
-                                ++ " ."
-            )
-        |> String.join """"""
+                    ++ node.id
+                    ++ somePhrases
+                    ++ " ."
 
 
 withLinks : Dict LinkId Link -> String

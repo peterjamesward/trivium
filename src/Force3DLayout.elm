@@ -2,6 +2,7 @@ module Force3DLayout exposing (..)
 
 import Angle exposing (..)
 import Arc3d exposing (..)
+import AsText exposing (attributesToText)
 import Axis2d exposing (..)
 import Axis3d exposing (..)
 import Block3d
@@ -1155,31 +1156,87 @@ textOverlay model =
         -- Create an SVG label at each place.
         -- If "nearest" make it more of a feature. Show atttributes.
         nodeLabels =
-            model.positions
+            (model.positions
                 |> Dict.map
                     (\id position ->
-                        if Just id == model.nearest then
-                            showWithAttributes position
-                                |> Svg.mirrorAcross
-                                    (Axis2d.through position.positionSvg Direction2d.x)
-
-                        else
-                            Svg.text_
-                                (textAttributes position.positionSvg)
-                                [ Svg.text position.label ]
-                                -- Hack: flip the text upside down since our later
-                                -- 'Svg.relativeTo topLeftFrame' call will flip it
-                                -- back right side up
-                                |> Svg.mirrorAcross
-                                    (Axis2d.through position.positionSvg Direction2d.x)
+                        Svg.text_
+                            (textAttributes position.positionSvg)
+                            [ Svg.text position.label ]
+                            -- Hack: flip the text upside down since our later
+                            -- 'Svg.relativeTo topLeftFrame' call will flip it
+                            -- back right side up
+                            |> Svg.mirrorAcross
+                                (Axis2d.through position.positionSvg Direction2d.x)
                     )
                 |> Dict.values
+            )
+                ++ infoForNearest
                 |> Svg.g []
 
+        infoForNearest =
+            case
+                model.nearest
+                    |> Maybe.andThen (\id -> Dict.get id model.positions)
+            of
+                Just nearest ->
+                    [ showWithAttributes nearest ]
+
+                Nothing ->
+                    []
+
         showWithAttributes position =
-            Svg.text_
-                (textAttributes position.positionSvg)
-                [ Svg.text position.label ]
+            let
+                ( x, y ) =
+                    position.positionSvg
+                        |> Point2d.translateIn Direction2d.y (Pixels.pixels -10)
+                        |> Point2d.toTuple inPixels
+
+                ( xString, yString ) =
+                    ( x, y ) |> Tuple.mapBoth String.fromFloat String.fromFloat
+
+                boxAttrs =
+                    [ Svg.Attributes.x xString
+                    , Svg.Attributes.y yString
+                    , Svg.Attributes.width "200"
+                    , Svg.Attributes.height "100"
+                    , Svg.Attributes.rx "15"
+                    , Svg.Attributes.ry "15"
+                    , Svg.Attributes.fill "lightGray"
+                    ]
+
+                textAttrs lineNum =
+                    [ Svg.Attributes.x <| String.fromFloat (x + 16.0)
+                    , Svg.Attributes.y <| String.fromFloat (y + lineNum * 16.0)
+                    , Svg.Attributes.fontFamily "Verdana"
+                    , Svg.Attributes.fill "blue"
+                    ]
+            in
+            Svg.g
+                [ Svg.Attributes.id "rowGroup" ]
+                (Svg.rect boxAttrs []
+                    :: (AsText.attributesToText position.attributes
+                            |> List.Extra.zip (List.range 1 10)
+                            |> List.map
+                                (\( lineNum, line ) ->
+                                    Svg.text_ (textAttrs (Basics.toFloat lineNum)) [ Svg.text line ]
+                                )
+                       )
+                )
+                |> Svg.mirrorAcross
+                    (Axis2d.through position.positionSvg Direction2d.x)
+
+        {- Example SVG tabular text
+           <g id='rowGroup' transform='translate(0, 150)'>
+               <rect x='25' y='40' width='310' height='20' fill='gainsboro'/>
+               <rect x='25' y='76' width='310' height='20' fill='gainsboro'/>
+
+               <text x='30' y='30' font-size='18px' font-weight='bold' fill='crimson' text-anchor='middle'>
+                  <tspan x='100'>Sales</tspan>
+                  <tspan x='200'>Expenses</tspan>
+                  <tspan x='300'>Net</tspan>
+               </text>
+             </g>
+        -}
     in
     let
         topLeftFrame =
