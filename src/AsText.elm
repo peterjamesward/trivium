@@ -109,6 +109,13 @@ nodeToText node =
     """
                 ]
 
+        attributesWithoutSpecials =
+            node.attributes
+                |> Dict.filter
+                    (\relation objects ->
+                        not <| Set.member relation (Set.fromList [ "is", "label" ])
+                    )
+
         phrases : String
         phrases =
             (([ Maybe.map (\class -> " is " ++ class) node.class
@@ -116,7 +123,7 @@ nodeToText node =
               ]
                 |> List.filterMap identity
              )
-                ++ (Dict.map attribute node.attributes |> Dict.values)
+                ++ (Dict.map attribute attributesWithoutSpecials |> Dict.values)
             )
                 |> String.join """;
 """
@@ -137,6 +144,13 @@ nodeToText node =
 
 withLinks : Dict LinkId Link -> String
 withLinks links =
+    {-
+       TODO: Filter out special attributes, as we do for Node.
+        |> Dict.filter
+            (\relation objects ->
+                not <| Set.member relation (Set.fromList [ "is", "label", "__FROM", "__TO" ])
+            )
+    -}
     let
         attribute : String -> Set String -> String
         attribute relation objects =
@@ -148,6 +162,14 @@ withLinks links =
 
         phrases : Link -> String
         phrases link =
+            let
+                filteredAttributes =
+                    link.attributes
+                        |> Dict.filter
+                            (\relation objects ->
+                                not <| Set.member relation (Set.fromList [ "is", "label", "__FROM", "__TO" ])
+                            )
+            in
             (([ Just
                     ("""
 """
@@ -161,7 +183,7 @@ withLinks links =
               ]
                 |> List.filterMap identity
              )
-                ++ (Dict.map attribute link.attributes |> Dict.values)
+                ++ (Dict.map attribute filteredAttributes |> Dict.values)
             )
                 |> String.join """;
 """

@@ -242,10 +242,6 @@ moduleFromTriples triples =
             , attributes =
                 Dict.get id indexes.subjectRelationIndex
                     |> Maybe.withDefault Dict.empty
-                    |> Dict.filter
-                        (\relation objects ->
-                            not <| Set.member relation (Set.fromList [ "is", "label" ])
-                        )
             }
 
         links =
@@ -262,12 +258,7 @@ moduleFromTriples triples =
             , toNode = fromIndex1 anon "__TO" indexes.subjectRelationIndex |> Maybe.withDefault ""
             , label = fromIndex1 anon "label" indexes.subjectRelationIndex |> Maybe.withDefault ""
             , class = fromIndex1 anon "is" indexes.subjectRelationIndex
-            , attributes =
-                inner
-                    |> Dict.filter
-                        (\relation objects ->
-                            not <| Set.member relation (Set.fromList [ "is", "label", "__FROM", "__TO" ])
-                        )
+            , attributes = inner
             }
 
         classes =
