@@ -1,7 +1,6 @@
 
 # WIP
 
-BUG? Is Save no updating backend?
 - Work out how make the Inspector pane act like hyperlinks.
 - E.g.: click on Protocol = http and it applies a filter, highlights matches, or loads "http" module...
 
@@ -14,7 +13,6 @@ BUG? Is Save no updating backend?
 
 - Report lex and parse errors with line and column.
 - Highlight loaded modules that are outdated.
-- Auto-stop animation if no motion detected would be nice.
 - Optimisation - send diffs between back and front ends.
 
 - Add Clockwise and Anticlockwise link alignment fields.

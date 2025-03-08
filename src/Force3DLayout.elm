@@ -1037,8 +1037,18 @@ applyForces theModule model =
                         }
                     )
 
+        totalOfNetForces : Vector3d Meters WorldCoordinates
+        totalOfNetForces =
+            Dict.foldl
+                (\id pos acc -> acc |> Vector3d.plus pos.force)
+                Vector3d.zero
+                withFields
+
         modelWithNewPositions =
-            { model | positions = mapToSvg model newPositions }
+            { model
+                | positions = mapToSvg model newPositions
+                , animation = Vector3d.length totalOfNetForces |> Quantity.greaterThan (Length.meters 1)
+            }
     in
     makeMeshFromCurrentPositions theModule modelWithNewPositions
 
