@@ -11,6 +11,9 @@ import Element exposing (..)
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import File exposing (..)
+import File.Download as Download exposing (..)
+import File.Select as Select exposing (..)
 import Force3DLayout
 import Html
 import Html.Attributes as Attr
@@ -19,6 +22,7 @@ import Lexer exposing (..)
 import Maybe.Extra exposing (join)
 import Parser exposing (..)
 import Set exposing (..)
+import Task exposing (..)
 import Time exposing (..)
 import Types exposing (..)
 import Url
@@ -88,6 +92,35 @@ update msg model =
                 |> rawFromTriples
     in
     case msg of
+        FileLoaded text ->
+            ( { model | contentEditArea = text }
+            , Cmd.none
+            )
+
+        FileSelected file ->
+            ( model, Task.perform FileLoaded (File.toString file) )
+
+        UserClickedLoadFile ->
+            ( model
+            , Select.file [] FileSelected
+            )
+
+        UserClickedDownload ->
+            let
+                filename =
+                    model.effectiveModule.id ++ ".txt"
+            in
+            if String.length model.contentEditArea > 0 then
+                ( model
+                , Download.string
+                    filename
+                    "text/trivium"
+                    model.contentEditArea
+                )
+
+            else
+                ( model, Cmd.none )
+
         UserTogglesRawMode isRaw ->
             let
                 effective =
@@ -349,6 +382,14 @@ view model =
 
                             Err error ->
                                 CommonUiElements.disabledButton error
+                        , Input.button CommonUiElements.buttonStyles
+                            { label = text "Download"
+                            , onPress = Just UserClickedDownload
+                            }
+                        , Input.button CommonUiElements.buttonStyles
+                            { label = text "Load file"
+                            , onPress = Just UserClickedLoadFile
+                            }
                         ]
                     ]
                 , Force3DLayout.view Force3DMsg model.visual3d
@@ -406,7 +447,7 @@ inspector model =
 
                 ( _, Just link ) ->
                     column columnStyles
-                        [ el [ Font.bold, padding 2 ] <| text link.linkId
+                        [ el [ Font.bold, padding 2 ] <| text link.label
                         , attributeTable link.attributes
                         ]
 

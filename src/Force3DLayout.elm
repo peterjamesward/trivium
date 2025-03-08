@@ -708,7 +708,11 @@ findItemNearest x y positions =
             else
                 ( bestId, bestDistance )
     in
-    closest
+    if closestDistance |> Quantity.lessThanOrEqualTo (Pixels.pixels 20) then
+        closest
+
+    else
+        Nothing
 
 
 view :
@@ -1132,7 +1136,6 @@ textOverlay model =
                 }
 
         nodes2dVisible =
-            --TODO: Finish SVG, reasonably neatly, considering we have two parallel position dicts.
             model.positions
                 |> Dict.filter
                     -- hide things behind the camera.
@@ -1140,6 +1143,7 @@ textOverlay model =
                         position.position3d |> Point3d.Projection.depth camera |> Quantity.greaterThanZero
                     )
                 |> Dict.filter
+                    -- hide things not visible.
                     (\id position ->
                         Rectangle2d.contains position.positionSvg useThisRectangleForSVG
                     )
@@ -1154,7 +1158,6 @@ textOverlay model =
             ]
 
         -- Create an SVG label at each place.
-        -- If "nearest" make it more of a feature. Show atttributes.
         nodeLabels =
             (model.positions
                 |> Dict.map
@@ -1174,6 +1177,7 @@ textOverlay model =
                 |> Svg.g []
 
         infoForNearest =
+            -- If "nearest" make it more of a feature. Show atttributes.
             case
                 model.nearest
                     |> Maybe.andThen (\id -> Dict.get id model.positions)
@@ -1192,7 +1196,7 @@ textOverlay model =
                         |> Point2d.toTuple inPixels
 
                 ( xString, yString ) =
-                    ( x, y ) |> Tuple.mapBoth String.fromFloat String.fromFloat
+                    ( String.fromFloat x, String.fromFloat y )
 
                 boxAttrs =
                     [ Svg.Attributes.x xString
@@ -1225,20 +1229,6 @@ textOverlay model =
                 |> Svg.mirrorAcross
                     (Axis2d.through position.positionSvg Direction2d.x)
 
-        {- Example SVG tabular text
-           <g id='rowGroup' transform='translate(0, 150)'>
-               <rect x='25' y='40' width='310' height='20' fill='gainsboro'/>
-               <rect x='25' y='76' width='310' height='20' fill='gainsboro'/>
-
-               <text x='30' y='30' font-size='18px' font-weight='bold' fill='crimson' text-anchor='middle'>
-                  <tspan x='100'>Sales</tspan>
-                  <tspan x='200'>Expenses</tspan>
-                  <tspan x='300'>Net</tspan>
-               </text>
-             </g>
-        -}
-    in
-    let
         topLeftFrame =
             Frame2d.atPoint
                 (Point2d.xy Quantity.zero hPixels)

@@ -4,6 +4,7 @@ import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Dict exposing (..)
 import DomainModel exposing (..)
+import File exposing (File)
 import Force3DLayout
 import LexerTypes exposing (..)
 import Parser exposing (..)
@@ -51,6 +52,10 @@ type FrontendMsg
     | UserClickedParse
     | UserTogglesModuleSelection ModuleId Bool
     | UserTogglesRawMode Bool
+    | UserClickedDownload
+    | UserClickedLoadFile
+    | FileSelected File
+    | FileLoaded String
 
 
 type ToBackend
