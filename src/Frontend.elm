@@ -60,6 +60,7 @@ init url key =
       , standbyModules = Dict.empty
       , showRawTriples = False
       , inspectedItem = Nothing
+      , activeView = Nothing
       }
     , Lamdera.sendToBackend RequestModuleList
     )
@@ -241,6 +242,7 @@ update msg model =
                     ( { model
                         | loadedModules = loadedModules
                         , effectiveModule = effective
+                        , selectedModules = Set.insert m.id model.selectedModules
                         , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
                       }
                     , Lamdera.sendToBackend (SaveModule m.id triples)

@@ -29,13 +29,14 @@ type alias FrontendModel =
     , showRawTriples : Bool
     , layoutList : List ModuleId -- a Layout essentially is a Module.
     , inspectedItem : Maybe NodeId -- (could be Node or Link, really)
+    , activeView : Maybe View
     }
 
 
 type alias BackendModel =
     { message : String
     , modules : Dict ModuleId (Set Triple)
-    , layouts : Dict ModuleId (Set Triple)
+    , views : Dict ModuleId (Set Triple)
     }
 
 

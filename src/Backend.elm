@@ -23,7 +23,7 @@ init : ( Model, Cmd BackendMsg )
 init =
     ( { message = "Hello!"
       , modules = Dict.empty
-      , layouts = Dict.empty
+      , views = Dict.empty
       }
     , Cmd.none
     )

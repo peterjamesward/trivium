@@ -28,11 +28,16 @@ Operation means that the flow is (View selects) source -> triples -> (View filte
 
 [ ] -- Add View list to backend.
 [ ] -- Add View flows between front and back.
+[ ] -- Recognise a View in the edit box.
 [ ] -- Select a View; view selects Modules.
 [ ] -- View applies filters to yield new effective module.
 
 
 ## Beyond ...
+
+- Sliders for FDL parameters.
+
+- Module deletion.
 
 - Work out how make the Inspector pane act like hyperlinks.
 > That will be by matching the attribute value with a Meta.

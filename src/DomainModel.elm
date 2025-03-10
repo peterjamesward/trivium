@@ -47,7 +47,7 @@ type alias ClassId =
     String
 
 
-type alias DiagramId =
+type alias ViewId =
     String
 
 
@@ -133,6 +133,16 @@ emptyModule =
     , classes = Dict.empty
     , nodes = Dict.empty
     , links = Dict.empty
+    }
+
+
+type alias View =
+    -- Sits above Modules and controls what is presented.
+    { id : ViewId
+    , label : String
+    , modules : Set ModuleId
+    , types : Set ClassId
+    , filters : Set ( String, String )
     }
 
 

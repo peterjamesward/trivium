@@ -66,8 +66,9 @@ punctuation =
     Set.fromList [ ',', ';', '.', ':' ]
 
 
-tokenTerminators =
-    Set.union whitespace punctuation
+
+--tokenTerminators =
+--    Set.union whitespace punctuation
 
 
 tokenFromPunctuation punc =
