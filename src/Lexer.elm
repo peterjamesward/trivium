@@ -47,7 +47,6 @@ tokenToString token =
 tokenize : String -> List Token
 tokenize input =
     -- TODO: return errors
-    -- TODO: stoppable fold
     -- https://package.elm-lang.org/packages/elm-community/list-extra/latest/List-Extra#stoppableFoldl
     let
         lexing =
@@ -146,17 +145,16 @@ nextCharacter char lex =
         ChompingString reversed ->
             -- Consume input until unescaped double quote.
             if char == '"' then
-                -- Don't save token until we see if there is a tag.
                 let
                     newToken =
-                        Quoted <| (String.fromList <| List.reverse reversed)
+                        Quoted <| (String.fromList <| List.reverse <| char :: reversed)
                 in
-                nextCharacter
-                    char
-                    { lex
-                        | state = LookingForTokenStart
-                        , tokens = newToken :: lex.tokens
-                    }
+                --nextCharacter
+                --    char
+                { lex
+                    | state = LookingForTokenStart
+                    , tokens = newToken :: lex.tokens
+                }
 
             else if char == '\\' then
                 { nextLex | state = StringEscape reversed }

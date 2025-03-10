@@ -7,7 +7,6 @@ import DomainModel exposing (..)
 import File exposing (File)
 import Force3DLayout
 import LexerTypes exposing (..)
-import Parser exposing (..)
 import Set exposing (..)
 import Time exposing (Posix)
 import Url exposing (Url)

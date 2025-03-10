@@ -15,8 +15,6 @@ import File exposing (..)
 import File.Download as Download exposing (..)
 import File.Select as Select exposing (..)
 import Force3DLayout
-import Html
-import Html.Attributes as Attr
 import Lamdera
 import Lexer exposing (..)
 import Maybe.Extra exposing (join)
@@ -26,7 +24,6 @@ import Task exposing (..)
 import Time exposing (..)
 import Types exposing (..)
 import Url
-import ViewCatalogue exposing (..)
 
 
 type alias Model =
@@ -155,7 +152,7 @@ update msg model =
                             | selectedModules = Set.insert moduleId model.selectedModules
                             , loadedModules = loadedModules
                             , standbyModules = Dict.remove moduleId model.standbyModules
-                            , effectiveModule = effectiveModule loadedModules
+                            , effectiveModule = effective
                             , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
                           }
                         , Cmd.none
@@ -185,7 +182,7 @@ update msg model =
 
                             Nothing ->
                                 model.standbyModules
-                    , effectiveModule = effectiveModule loadedModules
+                    , effectiveModule = effective
                     , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
                   }
                 , Cmd.none
@@ -243,7 +240,7 @@ update msg model =
                     in
                     ( { model
                         | loadedModules = loadedModules
-                        , effectiveModule = effectiveModule loadedModules
+                        , effectiveModule = effective
                         , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
                       }
                     , Lamdera.sendToBackend (SaveModule m.id triples)
@@ -281,7 +278,8 @@ update msg model =
         UserClickedParse ->
             let
                 tokens =
-                    Lexer.tokenize model.contentEditArea
+                    Debug.log "LEXER" <|
+                        Lexer.tokenize model.contentEditArea
 
                 parse =
                     Parser.parseTokensToTriples tokens
