@@ -74,7 +74,6 @@ withNodes nodes =
 
 attributesToText : InnerDict -> List String
 attributesToText attrs =
-    --TODO: Should be able to use this in SVG land.
     let
         attribute : String -> Set String -> String
         attribute relation objects =
@@ -144,13 +143,6 @@ nodeToText node =
 
 withLinks : Dict LinkId Link -> String
 withLinks links =
-    {-
-       TODO: Filter out special attributes, as we do for Node.
-        |> Dict.filter
-            (\relation objects ->
-                not <| Set.member relation (Set.fromList [ "is", "label", "__FROM", "__TO" ])
-            )
-    -}
     let
         attribute : String -> Set String -> String
         attribute relation objects =

@@ -230,7 +230,6 @@ update msg model =
 
         UserClickedSave ->
             case ( model.editingModule, model.parseStatus ) of
-                --TODO: update cached copy and regenerate visuals.
                 ( Just m, Ok triples ) ->
                     let
                         loadedModules =

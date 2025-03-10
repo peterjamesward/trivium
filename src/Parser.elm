@@ -180,7 +180,6 @@ convertToTriples token state =
                     -- Make new anonymous node.
                     -- Reify with the supplied from and to nodes.
                     -- Remaining phrases apply to the anon node.
-                    -- TODO: Actually need to defer the reification until we have the whole phrase!
                     case token of
                         Name toNode ->
                             LinkWithEndpoint fromNode toNode triples

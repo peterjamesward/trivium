@@ -40,7 +40,6 @@ rawFromTriples triples =
 
         buildNode : NodeId -> Node
         buildNode id =
-            --TODO: or implicit typing.
             --Note we only surface one value for any attribute.
             { id = id
             , label = Nothing
@@ -234,7 +233,6 @@ moduleFromTriples triples =
 
         buildNode : NodeId -> Node
         buildNode id =
-            --TODO: or implicit typing.
             --Note we only surface one value for any attribute.
             { id = id
             , label = fromIndex1 id "label" indexes.subjectRelationIndex

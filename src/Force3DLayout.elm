@@ -255,7 +255,6 @@ makeMeshFromCurrentPositions :
 makeMeshFromCurrentPositions aModule model =
     let
         nodeMesh =
-            --TODO: Styling.
             aModule.nodes
                 |> Dict.map
                     (\nodeId node ->
@@ -306,7 +305,6 @@ makeMeshFromCurrentPositions aModule model =
 
         linkMeshWithSplines : Position -> Position -> Position -> Style -> List (Entity WorldCoordinates)
         linkMeshWithSplines from mid to style =
-            --TODO: WIP: Use a spline with midpoint as a control point.
             let
                 tolerance =
                     1.0

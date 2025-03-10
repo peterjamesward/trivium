@@ -148,7 +148,6 @@ type alias View =
 
 preferredLinkDirection : Module -> Link -> Maybe (Direction3d WorldCoordinates)
 preferredLinkDirection content link =
-    --TODO: Use any bound Style if no direction on the class.
     link.class
         |> Maybe.map (\classId -> Dict.get classId content.classes)
         |> Maybe.Extra.join
@@ -199,7 +198,7 @@ linkStyle : Module -> Link -> Style
 linkStyle content link =
     -- 1. Maybe the link has "direction" and "colour".
     -- 2. If not, perhaps its class does.
-    --TODO: 3. If not, perhaps its class is bound to a Style.
+    --3. If not, perhaps its class is bound to a Style.
     -- Failing that return the default.
     let
         colour =
@@ -234,7 +233,7 @@ nodeStyle : Module -> Node -> Style
 nodeStyle content node =
     -- 1. Maybe the node has "shape" and "colour".
     -- 2. If not, perhaps its class does.
-    --TODO: 3. If not, perhaps its class is bound to a Style.
+    -- 3. If not, perhaps its class is bound to a Style.
     -- Failing that return the default.
     let
         colour =
