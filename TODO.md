@@ -5,6 +5,13 @@
 
 
 ## Introduce the View.
+
+### Alternative
+
+Given the very constrained structure and semantics of View, it may be much simpler not to bother with triple representation and just save the structure. UI is already partly there in terms of the Module selector; just need to add Type selectors and possibly attribute filters, a name field and a Save button ...
+
+### Original
+
 It's like a Module but only one can be active.
 It contains:
     - a set of Modules to be loaded (content and style),
@@ -13,25 +20,13 @@ It contains:
     - can also include content and styles.
 
 Syntax to be decided but something like:
+
 ```
 View : myPicture;
-    using moduleA, moduleB;
-    showing Server, Database, HostedOn;
-.
-
-Filter language SQL.
-
-HostedOn is Type; direction south.
+    Using moduleA, moduleB;
+    Showing Server, Database, HostedOn;
+    language SQL, GraphQL.
 ```
-
-Operation means that the flow is (View selects) source -> triples -> (View filters) -> effectiveModule.
-
-[ ] -- Add View list to backend.
-[ ] -- Add View flows between front and back.
-[ ] -- Recognise a View in the edit box.
-[ ] -- Select a View; view selects Modules.
-[ ] -- View applies filters to yield new effective module.
-
 
 ## Beyond ...
 

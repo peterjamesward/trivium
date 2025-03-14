@@ -30,6 +30,7 @@ type alias FrontendModel =
     , layoutList : List ModuleId -- a Layout essentially is a Module.
     , inspectedItem : Maybe NodeId -- (could be Node or Link, really)
     , activeView : Maybe View
+    , selectedTypes : Set ClassId -- to be moved into View struct.
     }
 
 
@@ -56,6 +57,9 @@ type FrontendMsg
     | UserClickedLoadFile
     | FileSelected File
     | FileLoaded String
+    | UserTogglesTypeSelection ClassId Bool
+    | UserClickedShowAllTypes
+    | UserClickedHideAllTypes
 
 
 type ToBackend

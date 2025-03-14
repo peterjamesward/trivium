@@ -61,6 +61,7 @@ init url key =
       , showRawTriples = False
       , inspectedItem = Nothing
       , activeView = Nothing
+      , selectedTypes = Set.empty
       }
     , Lamdera.sendToBackend RequestModuleList
     )
@@ -90,6 +91,33 @@ update msg model =
                 |> rawFromTriples
     in
     case msg of
+        UserClickedHideAllTypes ->
+            ( { model | selectedTypes = Set.empty }
+            , Cmd.none
+            )
+
+        UserClickedShowAllTypes ->
+            ( { model
+                | selectedTypes =
+                    model.effectiveModule.classes
+                        |> Dict.keys
+                        |> Set.fromList
+              }
+            , Cmd.none
+            )
+
+        UserTogglesTypeSelection typeId selected ->
+            ( { model
+                | selectedTypes =
+                    if Set.member typeId model.selectedTypes then
+                        Set.remove typeId model.selectedTypes
+
+                    else
+                        Set.insert typeId model.selectedTypes
+              }
+            , Cmd.none
+            )
+
         FileLoaded text ->
             ( { model | contentEditArea = text }
             , Cmd.none
@@ -337,37 +365,11 @@ updateFromBackend msg model =
 
 view : Model -> Browser.Document FrontendMsg
 view model =
-    { title = "Welcome to the Trivium"
-    , body =
-        [ layout
-            [ width fill
-            , height fill
-            , Font.size 12
-            , Font.family
-                [ Font.typeface "Open Sans"
-                , Font.sansSerif
-                ]
-            ]
-          <|
-            row columnStyles
-                [ column columnStyles
-                    [ row neatRowStyles
-                        [ Input.checkbox [ centerY ]
-                            { onChange = UserTogglesRawMode
-                            , icon = Input.defaultCheckbox
-                            , checked = model.showRawTriples
-                            , label = Input.labelRight [] (text "Show raw triples")
-                            }
-                        ]
-                    , text "Please input something."
-                    , Input.multiline [ height fill ]
-                        { onChange = UserUpdatedContent
-                        , text = model.contentEditArea
-                        , placeholder = Nothing
-                        , label = Input.labelHidden "content"
-                        , spellcheck = False
-                        }
-                    , row neatRowStyles
+    let
+        editArea =
+            let
+                buttons =
+                    row neatRowStyles
                         [ Input.button CommonUiElements.buttonStyles
                             { label = text "Validate"
                             , onPress = Just UserClickedParse
@@ -390,11 +392,51 @@ view model =
                             , onPress = Just UserClickedLoadFile
                             }
                         ]
+            in
+            column columnStyles
+                [ text "Please input something."
+                , Input.multiline [ height fill ]
+                    { onChange = UserUpdatedContent
+                    , text = model.contentEditArea
+                    , placeholder = Nothing
+                    , label = Input.labelHidden "content"
+                    , spellcheck = False
+                    }
+                , buttons
+                ]
+
+        viewOptions =
+            row neatRowStyles
+                [ Input.checkbox [ centerY ]
+                    { onChange = UserTogglesRawMode
+                    , icon = Input.defaultCheckbox
+                    , checked = model.showRawTriples
+                    , label = Input.labelRight [] (text "Show raw triples")
+                    }
+                ]
+    in
+    { title = "Welcome to the Trivium"
+    , body =
+        [ layout
+            [ width fill
+            , height fill
+            , Font.size 12
+            , Font.family
+                [ Font.typeface "Open Sans"
+                , Font.sansSerif
+                ]
+            ]
+          <|
+            row columnStyles
+                [ column columnStyles
+                    [ inspector model
+                    , viewOptions
+                    , editArea
                     ]
                 , Force3DLayout.view Force3DMsg model.visual3d
                 , column columnStyles
-                    [ inspector model
-                    , modulesTable model.moduleList model.selectedModules
+                    [ modulesTable model.moduleList model.selectedModules
+                    , typesTable model
                     ]
                 ]
         ]
@@ -510,6 +552,54 @@ modulesTable modules selected =
                     , { header = none
                       , width = fillPortion 1
                       , view = selectable
+                      }
+                    ]
+                }
+        ]
+
+
+typesTable : Model -> Element FrontendMsg
+typesTable model =
+    let
+        headerAttrs =
+            [ Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 } ]
+
+        includable item =
+            Input.checkbox [ centerY ]
+                { onChange = UserTogglesTypeSelection item
+                , icon = Input.defaultCheckbox
+                , checked = Set.member item model.selectedTypes
+                , label = Input.labelHidden "include"
+                }
+    in
+    column
+        columnStyles
+        [ row neatRowStyles
+            [ simpleButton UserClickedShowAllTypes "Show all"
+            , simpleButton UserClickedHideAllTypes "Hide all"
+            ]
+        , row [ width fill ]
+            [ el ((width <| fillPortion 1) :: headerAttrs) <| text "Show"
+            , el ((width <| fillPortion 6) :: headerAttrs) <| text "Type"
+            ]
+
+        -- workaround for a bug: it's necessary to wrap `table` in an `el`
+        -- to get table height attribute to apply
+        , el [ width fill ] <|
+            table
+                [ width fill
+                , scrollbarY
+                , spacing 1
+                ]
+                { data = model.effectiveModule.classes |> Dict.keys
+                , columns =
+                    [ { header = none
+                      , width = fillPortion 1
+                      , view = includable
+                      }
+                    , { header = none
+                      , width = fillPortion 6
+                      , view = text
                       }
                     ]
                 }
