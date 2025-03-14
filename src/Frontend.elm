@@ -62,6 +62,7 @@ init url key =
       , inspectedItem = Nothing
       , activeView = Nothing
       , selectedTypes = Set.empty
+      , strictMode = False
       }
     , Lamdera.sendToBackend RequestModuleList
     )
@@ -91,6 +92,20 @@ update msg model =
                 |> rawFromTriples
     in
     case msg of
+        UserTogglesStrictMode mode ->
+            let
+                newModel =
+                    { model | strictMode = mode }
+            in
+            ( { newModel
+                | visual3d =
+                    Force3DLayout.computeInitialPositions
+                        (applyViewFilters newModel newModel.effectiveModule)
+                        newModel.visual3d
+              }
+            , Cmd.none
+            )
+
         UserClickedHideAllTypes ->
             let
                 newModel =
@@ -370,27 +385,53 @@ update msg model =
 
 applyViewFilters : Model -> Module -> Module
 applyViewFilters model aModule =
-    -- Show only instance of types that are selected for viewing.
-    { aModule
-        | classes =
+    {-
+       In strict mode, nodes are visible only if their class is selected,
+       links are visible only if their class is selected and both ends are visible.
+       In non-strict mode, nodes and links that are not typed are also visible.
+       I am aware that these could be separated.
+    -}
+    let
+        filteredClasses =
             aModule.classes
                 |> Dict.filter (\id _ -> Set.member id model.selectedTypes)
-        , nodes =
+
+        filteredNodes =
+            --TODO: When non-strict, also show both ends of valid links.
             aModule.nodes
                 |> Dict.filter
-                    (\id node ->
+                    (\_ node ->
                         node.class
                             |> Maybe.andThen (\class -> Just <| Set.member class model.selectedTypes)
-                            |> Maybe.withDefault True
+                            |> Maybe.withDefault (not model.strictMode)
                     )
-        , links =
-            aModule.links
-                |> Dict.filter
-                    (\id link ->
-                        link.class
-                            |> Maybe.andThen (\class -> Just <| Set.member class model.selectedTypes)
-                            |> Maybe.withDefault True
-                    )
+
+        filteredLinks =
+            if model.strictMode then
+                aModule.links
+                    |> Dict.filter
+                        (\id link ->
+                            (link.class
+                                |> Maybe.andThen (\class -> Just <| Set.member class model.selectedTypes)
+                                |> Maybe.withDefault (not model.strictMode)
+                            )
+                                && Dict.member link.fromNode filteredNodes
+                                && Dict.member link.toNode filteredNodes
+                        )
+
+            else
+                aModule.links
+                    |> Dict.filter
+                        (\id link ->
+                            link.class
+                                |> Maybe.andThen (\class -> Just <| Set.member class model.selectedTypes)
+                                |> Maybe.withDefault (not model.strictMode)
+                        )
+    in
+    { aModule
+        | classes = filteredClasses
+        , nodes = filteredNodes
+        , links = filteredLinks
     }
 
 
@@ -644,6 +685,12 @@ typesTable model =
         [ row neatRowStyles
             [ simpleButton UserClickedShowAllTypes "Show all"
             , simpleButton UserClickedHideAllTypes "Hide all"
+            , Input.checkbox [ centerY ]
+                { onChange = UserTogglesStrictMode
+                , icon = Input.defaultCheckbox
+                , checked = model.strictMode
+                , label = Input.labelRight [] (text "Strict mode")
+                }
             ]
         , row [ width fill ]
             [ el ((width <| fillPortion 1) :: headerAttrs) <| text "Show"

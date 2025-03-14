@@ -31,6 +31,7 @@ type alias FrontendModel =
     , inspectedItem : Maybe NodeId -- (could be Node or Link, really)
     , activeView : Maybe View
     , selectedTypes : Set ClassId -- to be moved into View struct.
+    , strictMode : Bool
     }
 
 
@@ -60,6 +61,7 @@ type FrontendMsg
     | UserTogglesTypeSelection ClassId Bool
     | UserClickedShowAllTypes
     | UserClickedHideAllTypes
+    | UserTogglesStrictMode Bool
 
 
 type ToBackend
