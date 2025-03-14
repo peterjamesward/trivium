@@ -92,28 +92,55 @@ update msg model =
     in
     case msg of
         UserClickedHideAllTypes ->
-            ( { model | selectedTypes = Set.empty }
+            let
+                newModel =
+                    { model | selectedTypes = Set.empty }
+            in
+            ( { newModel
+                | visual3d =
+                    Force3DLayout.computeInitialPositions
+                        (applyViewFilters newModel newModel.effectiveModule)
+                        newModel.visual3d
+              }
             , Cmd.none
             )
 
         UserClickedShowAllTypes ->
-            ( { model
-                | selectedTypes =
-                    model.effectiveModule.classes
-                        |> Dict.keys
-                        |> Set.fromList
+            let
+                newModel =
+                    { model
+                        | selectedTypes =
+                            model.effectiveModule.classes
+                                |> Dict.keys
+                                |> Set.fromList
+                    }
+            in
+            ( { newModel
+                | visual3d =
+                    Force3DLayout.computeInitialPositions
+                        (applyViewFilters newModel newModel.effectiveModule)
+                        newModel.visual3d
               }
             , Cmd.none
             )
 
         UserTogglesTypeSelection typeId selected ->
-            ( { model
-                | selectedTypes =
-                    if Set.member typeId model.selectedTypes then
-                        Set.remove typeId model.selectedTypes
+            let
+                newModel =
+                    { model
+                        | selectedTypes =
+                            if Set.member typeId model.selectedTypes then
+                                Set.remove typeId model.selectedTypes
 
-                    else
-                        Set.insert typeId model.selectedTypes
+                            else
+                                Set.insert typeId model.selectedTypes
+                    }
+            in
+            ( { newModel
+                | visual3d =
+                    Force3DLayout.computeInitialPositions
+                        (applyViewFilters newModel newModel.effectiveModule)
+                        newModel.visual3d
               }
             , Cmd.none
             )
@@ -158,14 +185,16 @@ update msg model =
             in
             ( { model
                 | effectiveModule = effective
-                , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
+                , visual3d =
+                    Force3DLayout.computeInitialPositions
+                        (applyViewFilters model effective)
+                        model.visual3d
                 , showRawTriples = isRaw
               }
             , Cmd.none
             )
 
         UserTogglesModuleSelection moduleId active ->
-            --TODO: always regenerate visuals with currently loaded modules...
             if active then
                 -- If we have a copy locally, use it straight away.
                 case Dict.get moduleId model.standbyModules of
@@ -182,7 +211,10 @@ update msg model =
                             , loadedModules = loadedModules
                             , standbyModules = Dict.remove moduleId model.standbyModules
                             , effectiveModule = effective
-                            , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
+                            , visual3d =
+                                Force3DLayout.computeInitialPositions
+                                    (applyViewFilters model effective)
+                                    model.visual3d
                           }
                         , Cmd.none
                         )
@@ -212,7 +244,10 @@ update msg model =
                             Nothing ->
                                 model.standbyModules
                     , effectiveModule = effective
-                    , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
+                    , visual3d =
+                        Force3DLayout.computeInitialPositions
+                            (applyViewFilters model effective)
+                            model.visual3d
                   }
                 , Cmd.none
                 )
@@ -270,7 +305,10 @@ update msg model =
                         | loadedModules = loadedModules
                         , effectiveModule = effective
                         , selectedModules = Set.insert m.id model.selectedModules
-                        , visual3d = Force3DLayout.computeInitialPositions effective model.visual3d
+                        , visual3d =
+                            Force3DLayout.computeInitialPositions
+                                (applyViewFilters model effective)
+                                model.visual3d
                       }
                     , Lamdera.sendToBackend (SaveModule m.id triples)
                     )
@@ -330,6 +368,32 @@ update msg model =
             )
 
 
+applyViewFilters : Model -> Module -> Module
+applyViewFilters model aModule =
+    -- Show only instance of types that are selected for viewing.
+    { aModule
+        | classes =
+            aModule.classes
+                |> Dict.filter (\id _ -> Set.member id model.selectedTypes)
+        , nodes =
+            aModule.nodes
+                |> Dict.filter
+                    (\id node ->
+                        node.class
+                            |> Maybe.andThen (\class -> Just <| Set.member class model.selectedTypes)
+                            |> Maybe.withDefault True
+                    )
+        , links =
+            aModule.links
+                |> Dict.filter
+                    (\id link ->
+                        link.class
+                            |> Maybe.andThen (\class -> Just <| Set.member class model.selectedTypes)
+                            |> Maybe.withDefault True
+                    )
+    }
+
+
 updateFromBackend : ToFrontend -> Model -> ( Model, Cmd FrontendMsg )
 updateFromBackend msg model =
     case msg of
@@ -357,7 +421,10 @@ updateFromBackend msg model =
             ( { model
                 | loadedModules = withAddedModule
                 , effectiveModule = newModule
-                , visual3d = Force3DLayout.computeInitialPositions newModule model.visual3d
+                , visual3d =
+                    Force3DLayout.computeInitialPositions
+                        (applyViewFilters model newModule)
+                        model.visual3d
               }
             , Cmd.none
             )
