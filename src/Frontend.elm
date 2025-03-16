@@ -427,10 +427,28 @@ applyViewFilters model aModule =
                                 |> Maybe.andThen (\class -> Just <| Set.member class model.selectedTypes)
                                 |> Maybe.withDefault (not model.strictMode)
                         )
+
+        includeLinkEndsWhenNonStrict =
+            if model.strictMode then
+                Dict.empty
+
+            else
+                let
+                    linkEnds =
+                        filteredLinks
+                            |> Dict.foldl
+                                (\_ link endNodes ->
+                                    endNodes |> Set.insert link.fromNode |> Set.insert link.toNode
+                                )
+                                Set.empty
+                in
+                aModule.nodes
+                    |> Dict.filter
+                        (\nodeId _ -> Set.member nodeId linkEnds)
     in
     { aModule
         | classes = filteredClasses
-        , nodes = filteredNodes
+        , nodes = Dict.union filteredNodes includeLinkEndsWhenNonStrict
         , links = filteredLinks
     }
 
