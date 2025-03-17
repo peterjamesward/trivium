@@ -42,6 +42,16 @@ update msg model =
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
 updateFromFrontend sessionId clientId msg model =
     case msg of
+        RequestView id ->
+            case Dict.get id model.views of
+                Just theView ->
+                    ( model
+                    , Lamdera.sendToFrontend clientId (ViewContent theView)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         SaveView newView ->
             let
                 updated =

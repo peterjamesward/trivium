@@ -95,8 +95,8 @@ update msg model =
     in
     case msg of
         UserClickedViewId viewId ->
-            ( { model | viewNameEdit = viewId }
-            , Cmd.none
+            ( model
+            , Lamdera.sendToBackend (RequestView viewId)
             )
 
         UserEditViewName name ->
@@ -501,6 +501,26 @@ updateFromBackend msg model =
         ViewList viewIds ->
             ( { model | viewList = viewIds }
             , Cmd.none
+            )
+
+        ViewContent theView ->
+            let
+                newModel =
+                    { model
+                        | activeView = Just theView
+                        , selectedModules = theView.modules
+                        , selectedTypes = theView.types
+                    }
+
+                missingModules : Set ModuleId
+                missingModules =
+                    Set.diff theView.modules model.selectedModules
+            in
+            ( newModel
+            , missingModules
+                |> Set.toList
+                |> List.map (Lamdera.sendToBackend << RequestModule)
+                |> Cmd.batch
             )
 
         ModuleContent id triples ->

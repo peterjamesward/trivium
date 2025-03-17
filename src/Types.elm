@@ -75,6 +75,7 @@ type ToBackend
     | RequestModule ModuleId
     | RequestModuleList
     | SaveView View
+    | RequestView ViewId
 
 
 type BackendMsg
@@ -87,3 +88,4 @@ type ToFrontend
     | ModuleList (List ModuleId)
     | ModuleContent ModuleId (Set Triple)
     | ViewList (List ViewId)
+    | ViewContent View
