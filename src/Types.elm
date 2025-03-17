@@ -32,13 +32,15 @@ type alias FrontendModel =
     , activeView : Maybe View
     , selectedTypes : Set ClassId -- to be moved into View struct.
     , strictMode : Bool
+    , viewNameEdit : String
+    , viewList : List ViewId
     }
 
 
 type alias BackendModel =
     { message : String
     , modules : Dict ModuleId (Set Triple)
-    , views : Dict ModuleId (Set Triple)
+    , views : Dict ViewId View
     }
 
 
@@ -62,6 +64,8 @@ type FrontendMsg
     | UserClickedShowAllTypes
     | UserClickedHideAllTypes
     | UserTogglesStrictMode Bool
+    | UserEditViewName String
+    | UserClickedSaveView
 
 
 type ToBackend
@@ -69,6 +73,7 @@ type ToBackend
     | SaveModule String (Set Triple)
     | RequestModule ModuleId
     | RequestModuleList
+    | SaveView View
 
 
 type BackendMsg
@@ -80,3 +85,4 @@ type ToFrontend
     = NoOpToFrontend
     | ModuleList (List ModuleId)
     | ModuleContent ModuleId (Set Triple)
+    | ViewList (List ViewId)

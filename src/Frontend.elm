@@ -63,6 +63,8 @@ init url key =
       , activeView = Nothing
       , selectedTypes = Set.empty
       , strictMode = False
+      , viewNameEdit = ""
+      , viewList = []
       }
     , Lamdera.sendToBackend RequestModuleList
     )
@@ -92,6 +94,33 @@ update msg model =
                 |> rawFromTriples
     in
     case msg of
+        UserEditViewName name ->
+            ( { model | viewNameEdit = name }
+            , Cmd.none
+            )
+
+        UserClickedSaveView ->
+            let
+                newView =
+                    { id = model.viewNameEdit
+                    , label = ""
+                    , modules = model.selectedModules
+                    , types = model.selectedTypes
+                    , filters = Set.empty
+                    }
+
+                newModel =
+                    { model | activeView = Just newView }
+            in
+            ( newModel
+            , case newModel.activeView of
+                Just activeView ->
+                    Lamdera.sendToBackend (SaveView activeView)
+
+                Nothing ->
+                    Cmd.none
+            )
+
         UserTogglesStrictMode mode ->
             let
                 newModel =
@@ -464,6 +493,11 @@ updateFromBackend msg model =
             , Cmd.none
             )
 
+        ViewList viewIds ->
+            ( { model | viewList = viewIds }
+            , Cmd.none
+            )
+
         ModuleContent id triples ->
             let
                 withAddedModule =
@@ -563,6 +597,7 @@ view model =
                 , column columnStyles
                     [ modulesTable model.moduleList model.selectedModules
                     , typesTable model
+                    , viewsTable model
                     ]
                 ]
         ]
@@ -730,6 +765,51 @@ typesTable model =
                       , view = includable
                       }
                     , { header = none
+                      , width = fillPortion 6
+                      , view = text
+                      }
+                    ]
+                }
+        ]
+
+
+viewsTable : Model -> Element FrontendMsg
+viewsTable model =
+    let
+        --TODO: Edit field for view name.
+        --TODO: Save button.
+        --TODO: List backend views.
+        --TODO: Activate a view.
+        --TODO: Delete (active?) view.
+        headerAttrs =
+            [ Border.widthEach { bottom = 1, top = 0, left = 0, right = 0 } ]
+    in
+    column
+        columnStyles
+        [ row neatRowStyles
+            [ Input.text []
+                { onChange = UserEditViewName
+                , text = model.viewNameEdit
+                , placeholder = Nothing
+                , label = Input.labelLeft [] (text "View name")
+                }
+            , simpleButton UserClickedSaveView "Save"
+            ]
+        , row [ width fill ]
+            [ el ((width <| fillPortion 6) :: headerAttrs) <| text "View"
+            ]
+
+        -- workaround for a bug: it's necessary to wrap `table` in an `el`
+        -- to get table height attribute to apply
+        , el [ width fill ] <|
+            table
+                [ width fill
+                , scrollbarY
+                , spacing 1
+                ]
+                { data = model.viewList
+                , columns =
+                    [ { header = none
                       , width = fillPortion 6
                       , view = text
                       }

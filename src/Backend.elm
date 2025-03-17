@@ -42,6 +42,15 @@ update msg model =
 updateFromFrontend : SessionId -> ClientId -> ToBackend -> Model -> ( Model, Cmd BackendMsg )
 updateFromFrontend sessionId clientId msg model =
     case msg of
+        SaveView newView ->
+            let
+                updated =
+                    { model | views = Dict.insert newView.id newView model.views }
+            in
+            ( updated
+            , Lamdera.broadcast (ViewList (Dict.keys updated.views))
+            )
+
         RequestModule id ->
             case Dict.get id model.modules of
                 Just triples ->
@@ -54,7 +63,10 @@ updateFromFrontend sessionId clientId msg model =
 
         RequestModuleList ->
             ( model
-            , Lamdera.sendToFrontend clientId (ModuleList <| Dict.keys model.modules)
+            , Cmd.batch
+                [ Lamdera.sendToFrontend clientId (ModuleList <| Dict.keys model.modules)
+                , Lamdera.sendToFrontend clientId (ViewList <| Dict.keys model.views)
+                ]
             )
 
         SaveModule id triples ->

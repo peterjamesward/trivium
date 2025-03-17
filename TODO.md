@@ -7,12 +7,9 @@
 
 ## Introduce the View.
 
-Given the very constrained structure and semantics of View, it may be much simpler not to bother with triple representation and just save the structure. UI is already partly there in terms of the Module selector; just need to add Type selectors and possibly attribute filters, a name field and a Save button ...
-
-- If Link type is selected do we show Nodes regardless?
-- Need option to show untyped Nodes and Links.
-
-Both are satisfied by "Strict mode" option. When on, untyped nodes are hidden, links and their end nodes must have selected types.
+- Save a named View.
+- Choose a named View.
+- Edit a named View.
 
 ## Beyond ...
 
@@ -22,7 +19,7 @@ Both are satisfied by "Strict mode" option. When on, untyped nodes are hidden, l
 - Module deletion.
 
 - Work out how make the Inspector pane act like hyperlinks.
-> That will be by matching the attribute value with a named View.
+> That will be by matching the attribute value with a named View (???).
 - E.g.: click on Protocol = http and it applies a filter, highlights matches, or loads "http" module...
 
 - Attributes on types (other than reserved words) could act as proforma for instances.
