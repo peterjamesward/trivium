@@ -3,13 +3,15 @@
 
 ## BUGS
 
-- Why is filtered view showing link label for invisible link?
+## Changes
+
+Use uppercase initial for all reserved words - direction, shape, colours etc.
+Introduce a new linear force to keep things above the ground plane.
 
 ## Introduce the View.
 
-- Save a named View.
 - Choose a named View.
-- Edit a named View.
+- Delete a View.
 
 ## Beyond ...
 

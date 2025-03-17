@@ -66,6 +66,7 @@ type FrontendMsg
     | UserTogglesStrictMode Bool
     | UserEditViewName String
     | UserClickedSaveView
+    | UserClickedViewId String
 
 
 type ToBackend

@@ -94,6 +94,11 @@ update msg model =
                 |> rawFromTriples
     in
     case msg of
+        UserClickedViewId viewId ->
+            ( { model | viewNameEdit = viewId }
+            , Cmd.none
+            )
+
         UserEditViewName name ->
             ( { model | viewNameEdit = name }
             , Cmd.none
@@ -686,7 +691,11 @@ modulesTable modules selected =
     in
     column
         columnStyles
-        [ row [ width fill ]
+        [ row
+            [ width fill
+            , paddingEach { top = 4, left = 4, right = 4, bottom = 0 }
+            , spacing 4
+            ]
             [ el ((width <| fillPortion 1) :: headerAttrs) <| text "Show"
             , el ((width <| fillPortion 4) :: headerAttrs) <| text "Module"
             , el ((width <| fillPortion 1) :: headerAttrs) <| text "Edit"
@@ -698,7 +707,8 @@ modulesTable modules selected =
             table
                 [ width fill
                 , scrollbarY
-                , spacing 1
+                , paddingEach { top = 0, left = 4, right = 4, bottom = 4 }
+                , spacing 4
                 ]
                 { data = modules
                 , columns =
@@ -745,7 +755,11 @@ typesTable model =
                 , label = Input.labelRight [] (text "Strict mode")
                 }
             ]
-        , row [ width fill ]
+        , row
+            [ width fill
+            , paddingEach { top = 4, left = 4, right = 4, bottom = 0 }
+            , spacing 4
+            ]
             [ el ((width <| fillPortion 1) :: headerAttrs) <| text "Show"
             , el ((width <| fillPortion 6) :: headerAttrs) <| text "Type"
             ]
@@ -756,7 +770,8 @@ typesTable model =
             table
                 [ width fill
                 , scrollbarY
-                , spacing 1
+                , paddingEach { top = 0, left = 4, right = 4, bottom = 4 }
+                , spacing 4
                 ]
                 { data = model.effectiveModule.classes |> Dict.keys
                 , columns =
@@ -795,7 +810,11 @@ viewsTable model =
                 }
             , simpleButton UserClickedSaveView "Save"
             ]
-        , row [ width fill ]
+        , row
+            [ width fill
+            , paddingEach { top = 4, left = 4, right = 4, bottom = 0 }
+            , spacing 4
+            ]
             [ el ((width <| fillPortion 6) :: headerAttrs) <| text "View"
             ]
 
@@ -804,6 +823,8 @@ viewsTable model =
         , el [ width fill ] <|
             table
                 [ width fill
+                , paddingEach { top = 0, left = 4, right = 4, bottom = 4 }
+                , spacing 4
                 , scrollbarY
                 , spacing 1
                 ]
@@ -811,7 +832,7 @@ viewsTable model =
                 , columns =
                     [ { header = none
                       , width = fillPortion 6
-                      , view = text
+                      , view = \item -> simpleButton (UserClickedViewId item) item
                       }
                     ]
                 }
