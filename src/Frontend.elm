@@ -187,7 +187,7 @@ update msg model =
             in
             ( { newModel
                 | visual3d =
-                    Force3DLayout.computeInitialPositions
+                    Force3DLayout.makeMeshFromCurrentPositions
                         (applyViewFilters newModel newModel.effectiveModule)
                         newModel.visual3d
               }
@@ -359,7 +359,13 @@ update msg model =
                                 (applyViewFilters model effective)
                                 model.visual3d
                       }
-                    , Lamdera.sendToBackend (SaveModule m.id triples)
+                    , Cmd.batch
+                        [ Lamdera.sendToBackend (SaveModule m.id triples)
+                        , Download.string
+                            m.id
+                            "text/trivium"
+                            model.contentEditArea
+                        ]
                     )
 
                 _ ->
@@ -504,12 +510,14 @@ updateFromBackend msg model =
             )
 
         ViewContent theView ->
+            --TODO: Rebuild effective module.
             let
                 newModel =
                     { model
                         | activeView = Just theView
                         , selectedModules = theView.modules
                         , selectedTypes = theView.types
+                        , viewNameEdit = theView.id
                     }
 
                 missingModules : Set ModuleId

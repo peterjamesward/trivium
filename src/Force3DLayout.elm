@@ -162,17 +162,6 @@ computeInitialPositions content model =
     -- Must make sure that parallel links are separated at the start, so the repulsion works.
     -- Do this by treating the virtual nodes (link midpoints) the same as real nodes.
     let
-        -- Experimentally, preserve positions from prior state.
-        -- Use default positions only for new nodes and links.
-        pointWrap pt label =
-            { position3d = pt
-            , positionSvg = Point2d.origin
-            , positionClient = Point2d.origin
-            , label = label
-            , force = Vector3d.zero
-            , attributes = Dict.empty
-            }
-
         emptyPosition =
             { position3d = Point3d.origin
             , positionSvg = Point2d.origin
@@ -380,33 +369,6 @@ makeMeshFromCurrentPositions aModule model =
                         |> List.map (Scene3d.cylinder (Material.color style.colour))
             in
             cone1 ++ cone2 ++ segments
-
-        meshForLinkWithMidpoint : Position -> Position -> Position -> Style -> List (Entity WorldCoordinates)
-        meshForLinkWithMidpoint from mid to style =
-            -- This uses the midpoint as a simple hinge, at which we attach a directional cone.
-            let
-                direction =
-                    Direction3d.from from.position3d to.position3d
-                        |> Maybe.withDefault Direction3d.positiveZ
-
-                cone =
-                    Cone3d.startingAt
-                        mid.position3d
-                        direction
-                        { radius = Length.meters 2
-                        , length = Length.meters 10
-                        }
-
-                shiftedCone =
-                    cone |> Cone3d.translateIn direction (Length.meters -5)
-            in
-            Scene3d.cone (Material.color style.colour) shiftedCone
-                :: ([ Cylinder3d.from from.position3d mid.position3d (Length.meters 1)
-                    , Cylinder3d.from mid.position3d to.position3d (Length.meters 1)
-                    ]
-                        |> List.filterMap identity
-                        |> List.map (Scene3d.cylinder (Material.color style.colour))
-                   )
 
         linkWithTwoHalves : Link -> List (Entity WorldCoordinates)
         linkWithTwoHalves link =
