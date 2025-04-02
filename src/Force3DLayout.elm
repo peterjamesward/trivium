@@ -30,7 +30,6 @@ import Json.Decode as Decode
 import Length exposing (Meters)
 import LineSegment3d exposing (..)
 import List.Extra
-import Maybe.Extra
 import Pixels exposing (..)
 import Plane3d exposing (..)
 import Point2d exposing (..)
