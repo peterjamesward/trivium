@@ -185,12 +185,13 @@ update msg model =
                                 Set.insert typeId model.selectedTypes
                     }
             in
-            ( { newModel
-                | visual3d =
-                    Force3DLayout.makeMeshFromCurrentPositions
-                        (applyViewFilters newModel newModel.effectiveModule)
-                        newModel.visual3d
-              }
+            ( --{ newModel
+              --    | visual3d =
+              --        Force3DLayout.makeMeshFromCurrentPositions
+              --            (applyViewFilters newModel newModel.effectiveModule)
+              --            newModel.visual3d
+              --  }
+              model
             , Cmd.none
             )
 
@@ -626,7 +627,7 @@ view model =
                     , viewOptions
                     , editArea
                     ]
-                , Force3DLayout.view Force3DMsg model.visual3d
+                , Force3DLayout.view Force3DMsg model.effectiveModule model.visual3d
                 , column columnStyles
                     [ modulesTable model.moduleList model.selectedModules
                     , typesTable model

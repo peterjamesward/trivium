@@ -94,7 +94,8 @@ type alias Model =
     -- Rendering.
     , azimuth : Angle -- Orbiting angle of the camera around the focal point
     , elevation : Angle -- Angle of the camera up from the XY plane
-    , scene : List (Entity WorldCoordinates) -- Saved Mesh values for rendering
+
+    --, scene : List (Entity WorldCoordinates) -- Saved Mesh values for rendering
     , zoomLevel : Float
     , focalPoint : Point3d Meters WorldCoordinates
     , dragging : DragAction
@@ -139,7 +140,8 @@ init ( width, height ) =
     -- Rendering.
     , azimuth = Angle.degrees -90
     , elevation = Angle.degrees 90
-    , scene = []
+
+    --, scene = []
     , zoomLevel = 0.0
     , focalPoint = Point3d.origin
     , dragging = DragNone
@@ -233,13 +235,13 @@ computeInitialPositions content model =
         modelWithInitialPositions =
             { model | positions = mapToSvg model mergeNewAndOldPositions }
     in
-    makeMeshFromCurrentPositions content modelWithInitialPositions
+    modelWithInitialPositions
 
 
 makeMeshFromCurrentPositions :
     Module
     -> Model
-    -> Model
+    -> List (Entity WorldCoordinates)
 makeMeshFromCurrentPositions aModule model =
     let
         nodeMesh =
@@ -394,7 +396,7 @@ makeMeshFromCurrentPositions aModule model =
                 |> Dict.values
                 |> List.concatMap linkWithTwoHalves
     in
-    { model | scene = nodeMesh ++ linkMesh }
+    nodeMesh ++ linkMesh
 
 
 groundPlane : List (Entity WorldCoordinates)
@@ -676,9 +678,10 @@ findItemNearest x y positions =
 
 view :
     (Msg -> msg)
+    -> Module
     -> Model
     -> Element msg
-view wrapper model =
+view wrapper aModule model =
     let
         -- Create a camera by orbiting around a Z axis through the given
         -- focal point, with azimuth measured from the positive X direction
@@ -699,6 +702,9 @@ view wrapper model =
 
         ( w, h ) =
             Rectangle2d.dimensions model.screenRectangle
+
+        scene =
+            makeMeshFromCurrentPositions aModule model
     in
     column CommonUiElements.columnStyles
         [ row neatRowStyles
@@ -734,7 +740,7 @@ view wrapper model =
                     , clipDepth = Length.meters 0.1
                     , dimensions = ( Quantity.round w, Quantity.round h )
                     , background = Scene3d.transparentBackground
-                    , entities = groundPlane ++ model.scene
+                    , entities = scene
                     , shadows = True
                     , sunlightDirection = Direction3d.xyZ (Angle.degrees 45) (Angle.degrees 70)
                     , upDirection = Direction3d.positiveZ
@@ -1009,7 +1015,7 @@ applyForces theModule model =
                 , animation = Vector3d.length totalOfNetForces |> Quantity.greaterThan (Length.meters 1)
             }
     in
-    makeMeshFromCurrentPositions theModule modelWithNewPositions
+    modelWithNewPositions
 
 
 mapToSvg :
